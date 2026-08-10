@@ -4,5 +4,21 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>CFBundleDisplayName</key>
+	<string>Repostinho</string>
+	<!--
+		Sem UILaunchScreen o iOS não sabe o que mostrar na abertura. A cor vem do
+		LaunchBackground do catálogo, que tem variante escura: azul no claro e amarelo
+		no escuro, emendando com a toolbar de cada tema.
+	-->
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+		<key>UIImageName</key>
+		<string>LaunchIcon</string>
+		<key>UIImageRespectsSafeAreaInsets</key>
+		<true/>
+	</dict>
 </dict>
 </plist>
