@@ -5,6 +5,7 @@ import com.mach.apps.repostinho.domain.BalanceCalculator
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 
 class TransactionRepositoryImpl(private val calculator: BalanceCalculator) : TransactionRepository {

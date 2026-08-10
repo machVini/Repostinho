@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Antes do Android 12 não existe splash de sistema: o que aparece durante a abertura
+        é o windowBackground, então ele precisa ser azul também.
+    -->
+    <style name="Theme.Repostinho" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/rep_blue</item>
+    </style>
+</resources>
