@@ -2,6 +2,7 @@ package com.mach.apps.repostinho.di
 
 import com.mach.apps.repostinho.data.local.BankSheetCache
 import com.mach.apps.repostinho.data.local.MeetingNotesCache
+import com.mach.apps.repostinho.data.local.ThemePreferenceStore
 import com.mach.apps.repostinho.data.local.textFileStore
 import com.mach.apps.repostinho.data.repository.BankSheetRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
@@ -38,6 +39,9 @@ fun appModule(cacheDirectory: String) = module {
 
     // As atas moram numa pasta do Drive; o Worker lista, o app só abre os links.
     single { MeetingNotesCache(textFileStore(cacheDirectory)) }
+
+    // A escolha de tema mora no mesmo diretório do cache do banco.
+    single { ThemePreferenceStore(textFileStore(cacheDirectory)) }
     single<MeetingNotesRepository> { RemoteMeetingNotesRepository(get(), get()) }
 
     // ViewModel (no KMP usamos o Compose ViewModel ou bibliotecas como Voyager/Decompose)

@@ -26,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mach.apps.repostinho.data.local.ThemeMode
+import com.mach.apps.repostinho.data.local.ThemePreferenceStore
 import com.mach.apps.repostinho.presentation.BancoScreen
 import com.mach.apps.repostinho.presentation.CalendarioScreen
 import com.mach.apps.repostinho.presentation.DashboardViewModel
@@ -54,14 +56,18 @@ private enum class AppTab(val label: String, val title: String, val icon: ImageV
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App() {
-    // A escolha do morador na toolbar vence o sistema; enquanto ninguém tocar no botão,
-    // `null` mantém o app seguindo o tema do aparelho.
-    val systemDark = isSystemInDarkTheme()
-    var darkOverride by remember { mutableStateOf<Boolean?>(null) }
-    val darkTheme = darkOverride ?: systemDark
+    // KoinContext por fora do tema: a preferência salva precisa ser lida antes de decidir
+    // a cor, e quem a guarda vem da injeção.
+    KoinContext {
+        val themeStore = koinInject<ThemePreferenceStore>()
+        val systemDark = isSystemInDarkTheme()
 
-    RepostinhoTheme(darkTheme = darkTheme) {
-        KoinContext {
+        // `remember` para não reler o arquivo a cada recomposição. Enquanto o morador não
+        // tocar no botão, o modo é SISTEMA e o aparelho manda.
+        var themeMode by remember { mutableStateOf(themeStore.read()) }
+        val darkTheme = themeMode.isDark(systemDark)
+
+        RepostinhoTheme(darkTheme = darkTheme) {
             val viewModel = koinInject<DashboardViewModel>()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             val sheet by viewModel.sheet.collectAsStateWithLifecycle()
@@ -105,7 +111,19 @@ fun App() {
                             }
                         },
                         actions = {
-                            IconButton(onClick = { darkOverride = !darkTheme }) {
+                            IconButton(onClick = {
+                                // Grava na hora: se o app for morto logo depois, a
+                                // escolha já está em disco. O arquivo tem uma palavra.
+                                // Lê `themeMode` aqui, e não o `darkTheme` capturado na
+                                // composição: capturado, ele pode estar velho e o toque
+                                // regrava o mesmo valor, sem efeito visível.
+                                themeMode = if (themeMode.isDark(systemDark)) {
+                                    ThemeMode.CLARO
+                                } else {
+                                    ThemeMode.ESCURO
+                                }
+                                themeStore.write(themeMode)
+                            }) {
                                 Icon(
                                     imageVector = if (darkTheme) RepIcons.LightMode
                                     else RepIcons.DarkMode,
