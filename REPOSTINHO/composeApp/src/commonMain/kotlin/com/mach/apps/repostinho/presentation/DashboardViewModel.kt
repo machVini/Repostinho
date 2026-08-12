@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mach.apps.repostinho.data.model.CaixinhaLine
 import com.mach.apps.repostinho.data.model.ChoreTask
+import com.mach.apps.repostinho.data.model.MeetingNotes
 import com.mach.apps.repostinho.data.model.MemberBalance
 import com.mach.apps.repostinho.data.model.Movement
 import com.mach.apps.repostinho.data.model.RepEvent
@@ -12,6 +13,7 @@ import com.mach.apps.repostinho.data.repository.BankSheetRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
 import com.mach.apps.repostinho.data.repository.EventRepository
 import com.mach.apps.repostinho.data.repository.InMemoryResidentRepository
+import com.mach.apps.repostinho.data.repository.MeetingNotesRepository
 import com.mach.apps.repostinho.data.repository.ResidentRepository
 import com.mach.apps.repostinho.data.repository.SyncState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,7 +70,8 @@ class DashboardViewModel(
     private val residentRepository: ResidentRepository,
     private val choreRepository: ChoreRepository,
     private val eventRepository: EventRepository,
-    private val bankSheetRepository: BankSheetRepository
+    private val bankSheetRepository: BankSheetRepository,
+    private val meetingNotesRepository: MeetingNotesRepository
 ) : ViewModel() {
 
     private val currentResidentId =
@@ -107,15 +110,27 @@ class DashboardViewModel(
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val meetingNotes: StateFlow<MeetingNotes> = meetingNotesRepository.getNotes()
+        .catch { emit(MeetingNotes()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MeetingNotes())
+
     init {
         // Uma busca por abertura do app; durante a sessão, quem decide é o morador,
         // puxando a lista para baixo.
         refreshSheet()
     }
 
-    /** Rebusca a planilha. Ligado ao "puxar para atualizar" da Home e do Banco. */
-    fun refreshSheet() {
-        viewModelScope.launch { bankSheetRepository.refresh() }
+    /**
+     * Rebusca a planilha e as atas.
+     *
+     * [fresh] separa o gesto do morador da busca automática de abertura: puxando, ele
+     * quer o estado de agora, e o banco-api ignora o cache de borda.
+     */
+    fun refreshSheet(fresh: Boolean = false) {
+        viewModelScope.launch { bankSheetRepository.refresh(fresh) }
+        // As atas vêm no mesmo gesto: são duas listas da mesma tela, e ninguém espera
+        // puxar duas vezes.
+        viewModelScope.launch { meetingNotesRepository.refresh(fresh) }
     }
 
     /** Só a tarefa do próprio morador pode ser marcada; as outras são consulta. */

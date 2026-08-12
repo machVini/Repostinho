@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -21,6 +22,8 @@ import com.mach.apps.repostinho.data.model.CaixinhaLine
 import com.mach.apps.repostinho.data.model.MemberBalance
 import com.mach.apps.repostinho.data.model.Movement
 import com.mach.apps.repostinho.data.repository.SyncState
+import com.mach.apps.repostinho.ui.AutoSizeLabel
+import com.mach.apps.repostinho.ui.accentColor
 
 /** As abas espelham as da planilha: Saldos_pessoas, Movimentações e Saldos_caixinha. */
 private enum class BancoTab(val label: String) {
@@ -46,12 +49,29 @@ fun BancoScreen(
     Column(modifier = modifier.fillMaxSize()) {
         SyncBanner(syncState)
 
-        PrimaryTabRow(selectedTabIndex = selected.ordinal) {
+        // Cores por aba, e não via `contentColor`: este último pintaria as três de ouro,
+        // apagando justamente a diferença entre selecionada e não selecionada. O
+        // indicador também precisa ser explícito — o padrão usa `primary`, que no escuro
+        // sai azul e briga com o rótulo dourado.
+        PrimaryTabRow(
+            selectedTabIndex = selected.ordinal,
+            indicator = {
+                TabRowDefaults.PrimaryIndicator(
+                    modifier = Modifier.tabIndicatorOffset(
+                        selectedTabIndex = selected.ordinal,
+                        matchContentSize = true
+                    ),
+                    color = accentColor()
+                )
+            }
+        ) {
             BancoTab.entries.forEach { tab ->
                 Tab(
                     selected = tab == selected,
                     onClick = { selected = tab },
-                    text = { Text(tab.label) }
+                    text = { AutoSizeLabel(tab.label) },
+                    selectedContentColor = accentColor(),
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

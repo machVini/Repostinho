@@ -12,8 +12,10 @@ conversão fica aqui.
 ```bash
 cd banco-api
 npm install
-wrangler secret put SHEET_URL   # link de download direto da planilha
-wrangler secret put API_TOKEN   # qualquer string longa; a mesma vai no app
+wrangler secret put SHEET_URL        # link de download direto da planilha
+wrangler secret put API_TOKEN        # qualquer string longa; a mesma vai no app
+wrangler secret put DRIVE_FOLDER_ID  # id da pasta das atas no Drive
+wrangler secret put DRIVE_API_KEY    # chave de API do Google com Drive API habilitada
 wrangler deploy
 ```
 
@@ -47,7 +49,37 @@ https://<tenant>-my.sharepoint.com/personal/<usuario>/_layouts/15/download.aspx?
 Os nomes dos campos são os das `data class` do app, então o JSON desserializa direto
 nos modelos. Mudar um nome aqui quebra o app.
 
-Respostas são cacheadas por 5 minutos na borda.
+`GET /atas`, mesmo header, lista as três atas mais recentes da pasta do Drive:
+
+```json
+{
+  "folderUrl": "https://drive.google.com/drive/folders/<id>",
+  "files": [ { "id": "...", "name": "Ata 2026-08-05", "url": "https://drive.google.com/..." } ]
+}
+```
+
+A ordem sai da **data no nome do arquivo**, não da data de criação no Drive: subir uma ata
+antiga depois não deve colocá-la no topo do card. São reconhecidos, em qualquer posição do
+nome, `18/08/2026`, `1/9/2026`, `2026-08-18` e `18 de agosto de 2026` (com ou sem acento).
+
+Duas coisas a saber: dia vem antes do mês, então `03/04/2026` é 3 de abril; e um nome sem
+data reconhecível cai para a data de criação, o que mistura dois critérios de ordenação na
+mesma lista. `test/atas.test.mjs` cobre esses casos.
+
+Respostas do banco são cacheadas por 5 minutos na borda; as atas, por 30 minutos.
+
+### A pasta precisa estar aberta por link
+
+Uma chave de API do Google só enxerga o que está compartilhado como "qualquer pessoa com
+o link". A pasta das atas está assim, por decisão do dono: quem tiver a URL da pasta lê
+as atas, sem login.
+
+Se um dia isso incomodar, a alternativa é trocar a chave por uma conta de serviço —
+compartilhar a pasta só com o e-mail dela e assinar um JWT aqui no Worker. Aí a pasta
+volta a ser privada, e os moradores seguem abrindo os arquivos com as contas deles.
+
+Se `GET /atas` responder 502 com um 403 do Drive dentro, é quase sempre a pasta ter
+deixado de ser pública.
 
 ## Limites
 

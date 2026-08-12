@@ -1,10 +1,13 @@
 package com.mach.apps.repostinho.presentation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -20,11 +23,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mach.apps.repostinho.ui.RepIcons
+import com.mach.apps.repostinho.data.model.MeetingNotes
 import com.mach.apps.repostinho.data.model.ChoreTask
 import com.mach.apps.repostinho.ui.positiveColor
 
@@ -33,6 +39,7 @@ import com.mach.apps.repostinho.ui.positiveColor
 fun HomeScreen(
     state: BankUiState,
     sheet: SheetUiState,
+    notes: MeetingNotes,
     tasks: List<ChoreTask>,
     onGoToBanco: () -> Unit,
     onGoToTarefas: () -> Unit,
@@ -46,7 +53,7 @@ fun HomeScreen(
         onRefresh = onRefresh,
         modifier = modifier
     ) {
-        HomeContent(state, sheet, tasks, myTask, onGoToBanco, onGoToTarefas)
+        HomeContent(state, sheet, notes, tasks, myTask, onGoToBanco, onGoToTarefas)
     }
 }
 
@@ -54,6 +61,7 @@ fun HomeScreen(
 private fun HomeContent(
     state: BankUiState,
     sheet: SheetUiState,
+    notes: MeetingNotes,
     tasks: List<ChoreTask>,
     myTask: ChoreTask?,
     onGoToBanco: () -> Unit,
@@ -77,7 +85,7 @@ private fun HomeContent(
 
         item { MyBalanceCard(sheet, onGoToBanco) }
         item { MyTaskCard(myTask, tasks, onGoToTarefas) }
-        item { MeetingNotesCard() }
+        item { MeetingNotesCard(notes) }
         item { RepSummaryCard(sheet) }
     }
 }
@@ -175,24 +183,58 @@ private fun MyTaskCard(
     }
 }
 
-/** Atas ainda não existem como funcionalidade: o card é só o lugar reservado para elas. */
+/**
+ * As últimas atas da pasta do Drive.
+ *
+ * O app não lê o conteúdo: cada linha abre o arquivo no Drive. Quem pode abrir é decidido
+ * pelo compartilhamento da pasta, não aqui.
+ */
 @Composable
-private fun MeetingNotesCard() {
+private fun MeetingNotesCard(notes: MeetingNotes) {
+    val uriHandler = LocalUriHandler.current
+
     Card(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text("Atas de reunião", fontWeight = FontWeight.Bold)
-            Text(
-                text = "Ainda não implementado.",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-            Text(
-                text = "Aqui entrariam as decisões das reuniões da rep, com data e " +
-                    "quem estava presente.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp)
-            )
+
+            if (notes.files.isEmpty()) {
+                Text(
+                    text = "Nenhuma ata encontrada na pasta.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            notes.files.forEach { note ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { uriHandler.openUri(note.url) }
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = note.name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(
+                        imageVector = RepIcons.OpenExternal,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Sem a pasta não há para onde levar — o botão sumiria em vez de abrir nada.
+            if (notes.folderUrl.isNotBlank()) {
+                TextButton(onClick = { uriHandler.openUri(notes.folderUrl) }) {
+                    Text("Ver mais", fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
@@ -217,7 +259,16 @@ private fun SummaryLine(label: String, value: String) {
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, fontWeight = FontWeight.Bold)
+        // O rótulo cede espaço; o valor nunca quebra. Sem o peso, "Total a receber" e
+        // um número de cinco dígitos colidiam em tela estreita.
+        Text(
+            text = label,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(value, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
