@@ -6,6 +6,7 @@ import com.mach.apps.repostinho.di.initKoin
 class RepostinhoApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        initKoin()
+        // `filesDir` sobrevive a atualizações do app; o cache do banco mora aqui.
+        initKoin(filesDir.absolutePath)
     }
 }

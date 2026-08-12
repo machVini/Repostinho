@@ -1,5 +1,6 @@
 package com.mach.apps.repostinho.data.repository
 
+import com.mach.apps.repostinho.data.local.BankSheetCache
 import com.mach.apps.repostinho.data.model.CaixinhaLine
 import com.mach.apps.repostinho.data.model.MemberBalance
 import com.mach.apps.repostinho.data.model.Movement
@@ -13,11 +14,14 @@ import kotlinx.coroutines.flow.asStateFlow
 sealed interface SyncState {
     data object Loading : SyncState
 
-    /** Vieram da planilha agora. [generatedAt] é ISO-8601, como o Worker devolve. */
-    data class Live(val generatedAt: String) : SyncState
+    /** Buscados da planilha agora. */
+    data class Live(val generatedAtLabel: String) : SyncState
 
-    /** A busca falhou e a tela está com o retrato embutido no app. */
-    data class Fallback(val reason: String) : SyncState
+    /** A busca falhou; a tela está com a última resposta boa, gravada em disco. */
+    data class Cached(val generatedAtLabel: String) : SyncState
+
+    /** Falhou e não há nada em cache — primeira abertura sem rede. */
+    data class Failed(val reason: String) : SyncState
 }
 
 /**
@@ -32,23 +36,35 @@ interface BankSheetRepository {
     fun getCaixinha(): Flow<List<CaixinhaLine>>
     fun getSyncState(): Flow<SyncState>
 
-    /** Busca a versão atual. Não lança: falha vira [SyncState.Fallback]. */
+    /** Busca a versão atual. Não lança: falha vira [SyncState.Cached] ou [SyncState.Failed]. */
     suspend fun refresh()
 }
 
 /**
- * Busca a planilha convertida no `banco-api` a cada abertura do app.
+ * Busca a planilha convertida no `banco-api` e guarda a última resposta boa em disco.
  *
- * Começa exibindo o retrato embutido em [BankSheetSeed] e o substitui quando a resposta
- * chega. Sem rede, a tela mostra o retrato com um aviso — melhor um número velho e
- * identificado como velho do que uma tela vazia.
+ * Sem rede, a tela mostra o cache com a data de quando ele foi buscado. Se nem cache
+ * houver — primeira abertura offline — as listas ficam vazias e a tela diz isso, em vez de
+ * inventar números.
  */
-class RemoteBankSheetRepository(private val api: BankApi) : BankSheetRepository {
+class RemoteBankSheetRepository(
+    private val api: BankApi,
+    private val cache: BankSheetCache
+) : BankSheetRepository {
 
-    private val balances = MutableStateFlow(BankSheetSeed.BALANCES)
-    private val movements = MutableStateFlow(BankSheetSeed.MOVEMENTS)
-    private val caixinha = MutableStateFlow(BankSheetSeed.CAIXINHA)
+    private val balances = MutableStateFlow<List<MemberBalance>>(emptyList())
+    private val movements = MutableStateFlow<List<Movement>>(emptyList())
+    private val caixinha = MutableStateFlow<List<CaixinhaLine>>(emptyList())
     private val syncState = MutableStateFlow<SyncState>(SyncState.Loading)
+
+    init {
+        // O cache entra antes da rede: a tela abre com números na hora, e a resposta os
+        // substitui quando chega.
+        cache.read()?.let { cached ->
+            publish(cached.balances, cached.movements, cached.caixinha)
+            syncState.value = SyncState.Cached(cached.generatedAtLabel)
+        }
+    }
 
     override fun getBalances(): Flow<List<MemberBalance>> = balances.asStateFlow()
     override fun getMovements(): Flow<List<Movement>> = movements.asStateFlow()
@@ -57,46 +73,44 @@ class RemoteBankSheetRepository(private val api: BankApi) : BankSheetRepository 
 
     override suspend fun refresh() {
         if (!BankApiConfig.isConfigured) {
-            syncState.value = SyncState.Fallback("banco-api não configurado")
+            fallback("banco-api não configurado")
             return
         }
 
         syncState.value = SyncState.Loading
         try {
             val payload = api.fetchSheet()
-            // Resposta vazia é sintoma de aba renomeada na planilha. Manter o retrato
-            // anterior é menos errado do que zerar os saldos na tela.
+            // Resposta vazia é sintoma de aba renomeada na planilha. Guardar isso no cache
+            // apagaria os últimos números bons que o app tinha.
             if (payload.balances.isEmpty()) {
-                syncState.value = SyncState.Fallback("a planilha voltou sem saldos")
+                fallback("a planilha voltou sem saldos")
                 return
             }
-            balances.value = payload.balances
-            movements.value = payload.movements
-            caixinha.value = payload.caixinha
-            syncState.value = SyncState.Live(payload.generatedAt)
+            publish(payload.balances, payload.movements, payload.caixinha)
+            cache.write(payload)
+            syncState.value = SyncState.Live(payload.generatedAtLabel)
         } catch (e: Exception) {
-            syncState.value = SyncState.Fallback(e.message ?: "falha ao buscar")
+            fallback(e.message ?: "falha ao buscar")
         }
     }
-}
 
-/** Só o retrato embutido: usado quando não se quer rede (testes, desenvolvimento). */
-class InMemoryBankSheetRepository : BankSheetRepository {
+    private fun publish(
+        newBalances: List<MemberBalance>,
+        newMovements: List<Movement>,
+        newCaixinha: List<CaixinhaLine>
+    ) {
+        balances.value = newBalances
+        movements.value = newMovements
+        caixinha.value = newCaixinha
+    }
 
-    private val state = MutableStateFlow<SyncState>(
-        SyncState.Fallback("retrato embutido no app")
-    )
-
-    override fun getBalances(): Flow<List<MemberBalance>> =
-        MutableStateFlow(BankSheetSeed.BALANCES).asStateFlow()
-
-    override fun getMovements(): Flow<List<Movement>> =
-        MutableStateFlow(BankSheetSeed.MOVEMENTS).asStateFlow()
-
-    override fun getCaixinha(): Flow<List<CaixinhaLine>> =
-        MutableStateFlow(BankSheetSeed.CAIXINHA).asStateFlow()
-
-    override fun getSyncState(): Flow<SyncState> = state.asStateFlow()
-
-    override suspend fun refresh() = Unit
+    private fun fallback(reason: String) {
+        val cached = cache.read()
+        syncState.value = if (cached == null) {
+            SyncState.Failed(reason)
+        } else {
+            publish(cached.balances, cached.movements, cached.caixinha)
+            SyncState.Cached(cached.generatedAtLabel)
+        }
+    }
 }

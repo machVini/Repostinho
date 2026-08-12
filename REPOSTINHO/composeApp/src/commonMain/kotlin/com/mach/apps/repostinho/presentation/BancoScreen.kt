@@ -98,14 +98,28 @@ private fun SyncBanner(syncState: SyncState) {
         is SyncState.Loading ->
             "Buscando a planilha…" to MaterialTheme.colorScheme.onSurfaceVariant
 
-        is SyncState.Live ->
-            "Direto da planilha" to MaterialTheme.colorScheme.onSurfaceVariant
+        // A data pode vir vazia se o banco-api publicado for anterior ao campo, ou se o
+        // cache tiver sido gravado nessa época. A frase precisa continuar de pé sem ela.
+        is SyncState.Live -> {
+            val when_ = syncState.generatedAtLabel
+            val text = if (when_.isBlank()) "Atualizado agora"
+            else "Atualizado agora · planilha de $when_"
+            text to MaterialTheme.colorScheme.onSurfaceVariant
+        }
+
+        // A data é o que importa aqui: sem ela, "sem conexão" não diz se o número é de dez
+        // minutos ou de duas semanas atrás.
+        is SyncState.Cached -> {
+            val when_ = syncState.generatedAtLabel
+            val text = if (when_.isBlank()) "Sem conexão — mostrando a última cópia"
+            else "Sem conexão — dados de $when_"
+            text to MaterialTheme.colorScheme.error
+        }
 
         // `reason` fica de fora: é mensagem de erro de rede (um NSURLError inteiro, no
         // iOS) e ocupava a tela toda. Ela segue no estado, para log.
-        is SyncState.Fallback ->
-            "Sem conexão com a planilha — mostrando a última cópia" to
-                MaterialTheme.colorScheme.error
+        is SyncState.Failed ->
+            "Não foi possível carregar o banco" to MaterialTheme.colorScheme.error
     }
 
     Text(

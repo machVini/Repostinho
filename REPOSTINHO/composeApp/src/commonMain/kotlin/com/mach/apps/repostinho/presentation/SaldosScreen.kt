@@ -44,6 +44,18 @@ fun SaldosScreen(
             }
         }
 
+        // Sem cache e sem rede: melhor dizer que não há dado do que deixar a tela em branco.
+        if (balances.isEmpty()) {
+            item {
+                Text(
+                    text = "Nada carregado ainda. Puxe para baixo quando estiver com " +
+                        "internet.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
         items(current) { balance ->
             BalanceCard(balance, highlighted = balance.name == currentMemberName)
         }

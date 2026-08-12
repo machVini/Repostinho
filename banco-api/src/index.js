@@ -187,8 +187,18 @@ export default {
       return json({ error: `abas não encontradas: ${missing.join(", ")}` }, 502);
     }
 
+    const now = new Date();
     const payload = {
-      generatedAt: new Date().toISOString(),
+      generatedAt: now.toISOString(),
+      // Formatado aqui porque o app não tem biblioteca de data: converter UTC para o
+      // fuso de Campinas no Kotlin/Native custaria uma dependência inteira.
+      generatedAtLabel: new Intl.DateTimeFormat("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(now),
       balances: [
         ...readBalances(balancesSheet, BALANCES_CURRENT, false),
         ...readBalances(balancesSheet, BALANCES_FORMER, true),
