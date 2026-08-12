@@ -1,9 +1,11 @@
 package com.mach.apps.repostinho.presentation
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -23,15 +25,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mach.apps.repostinho.ui.LocalDarkTheme
 import com.mach.apps.repostinho.ui.RepIcons
 import com.mach.apps.repostinho.data.model.MeetingNotes
 import com.mach.apps.repostinho.data.model.ChoreTask
+import org.jetbrains.compose.resources.painterResource
+import repostinho.composeapp.generated.resources.Res
+import repostinho.composeapp.generated.resources.logo_peito
+import repostinho.composeapp.generated.resources.logo_rep
 import com.mach.apps.repostinho.ui.positiveColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,20 +76,7 @@ private fun HomeContent(
     onGoToTarefas: () -> Unit
 ) {
     LazyColumn(modifier = Modifier.fillMaxWidth()) {
-        item {
-            Column(modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) {
-                Text(
-                    text = "Olá, ${SheetUiState.CURRENT_MEMBER_NAME}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "República Postinho · desde 2023",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+        item { Greeting() }
 
         item { MyBalanceCard(sheet, onGoToBanco) }
         item { MyTaskCard(myTask, tasks, onGoToTarefas) }
@@ -89,6 +84,54 @@ private fun HomeContent(
         item { RepSummaryCard(sheet) }
     }
 }
+
+/**
+ * Saudação com os dois brasões da rep à direita.
+ *
+ * O texto leva `weight` para os logos nunca serem empurrados para fora: num aparelho
+ * estreito quem cede é o nome, não a marca.
+ */
+@Composable
+private fun Greeting() {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Olá, ${SheetUiState.CURRENT_MEMBER_NAME}",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "República Postinho · desde 2023",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Image(
+            painter = painterResource(Res.drawable.logo_rep),
+            contentDescription = "Brasão da República Postinho",
+            modifier = Modifier.size(LOGO_SIZE)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Image(
+            painter = painterResource(Res.drawable.logo_peito),
+            contentDescription = "Logo secundário da rep",
+            // O secundário é traço azul-marinho chapado: no fundo escuro ele quase some.
+            // Como é de uma cor só, tingir resolve sem precisar de um segundo arquivo.
+            colorFilter = if (LocalDarkTheme.current) {
+                ColorFilter.tint(MaterialTheme.colorScheme.secondary)
+            } else {
+                null
+            },
+            modifier = Modifier.size(LOGO_SIZE)
+        )
+    }
+}
+
+private val LOGO_SIZE = 34.dp
 
 @Composable
 private fun MyBalanceCard(sheet: SheetUiState, onGoToBanco: () -> Unit) {
