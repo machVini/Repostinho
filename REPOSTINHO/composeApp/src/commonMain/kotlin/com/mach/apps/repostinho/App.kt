@@ -158,6 +158,7 @@ fun App() {
                             tasks = tasks,
                             onGoToBanco = { navigateTo(AppTab.BANCO) },
                             onGoToTarefas = { navigateTo(AppTab.TAREFAS) },
+                            onRefresh = viewModel::refreshSheet,
                             modifier = inset
                         )
 
@@ -167,6 +168,8 @@ fun App() {
                             caixinha = sheet.caixinha,
                             currentMemberName = SheetUiState.CURRENT_MEMBER_NAME,
                             syncState = sheet.syncState,
+                            isRefreshing = sheet.isRefreshing,
+                            onRefresh = viewModel::refreshSheet,
                             modifier = full
                         )
 

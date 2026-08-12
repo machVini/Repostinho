@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mach.apps.repostinho.data.model.Movement
-import com.mach.apps.repostinho.data.model.TransactionType
+import com.mach.apps.repostinho.data.model.MovementType
 import com.mach.apps.repostinho.ui.positiveColor
 
 @Composable
@@ -61,7 +61,7 @@ fun LancamentosScreen(
 
 @Composable
 private fun MovementCard(movement: Movement, currentMemberName: String) {
-    val isEntry = movement.type == TransactionType.ENTRADA
+    val isEntry = movement.type == MovementType.ENTRADA
     val myWeight = movement.weights[currentMemberName]
 
     Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -113,9 +113,9 @@ private fun MovementCard(movement: Movement, currentMemberName: String) {
     }
 }
 
-private fun label(type: TransactionType): String = when (type) {
-    TransactionType.COLETIVO -> "Coletivo"
-    TransactionType.PRIVADO -> "Privado"
-    TransactionType.ENTRADA -> "Entrada"
-    TransactionType.SAIDA -> "Saída"
+private fun label(type: MovementType): String = when (type) {
+    MovementType.COLETIVO -> "Coletivo"
+    MovementType.PRIVADO -> "Privado"
+    MovementType.ENTRADA -> "Entrada"
+    MovementType.SAIDA -> "Saída"
 }

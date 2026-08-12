@@ -3,7 +3,7 @@ package com.mach.apps.repostinho.data.repository
 import com.mach.apps.repostinho.data.model.CaixinhaLine
 import com.mach.apps.repostinho.data.model.MemberBalance
 import com.mach.apps.repostinho.data.model.Movement
-import com.mach.apps.repostinho.data.model.TransactionType
+import com.mach.apps.repostinho.data.model.MovementType
 
 /*
  * Retrato da planilha "Banco atual.xlsm" (abas Movimentações, Saldos_pessoas e
@@ -57,7 +57,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row2",
             description = "Aluguel junho pago em 18/07",
-            type = TransactionType.COLETIVO,
+            type = MovementType.COLETIVO,
             payer = "Caix. Déb/PIX",
             valueCents = 704888L,
             weights = mapOf("Lameu" to 0.8, "Leozin" to 1.1, "Pico" to 1.1, "LL" to 1.1, "Du" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 0.95, "Gu" to 0.95, "Mixirica" to 0.88, "Massa" to 0.88, "VK" to 1.0, "Cansado" to 0.88, "Prazer" to 0.8, "Picasso" to 0.8),
@@ -67,7 +67,7 @@ internal object BankSheetSeed {
         Movement(
             id = "291",
             description = "Aluguel prazer 13/07",
-            type = TransactionType.ENTRADA,
+            type = MovementType.ENTRADA,
             payer = "Prazer",
             valueCents = 66987L,
             weights = emptyMap(),
@@ -77,7 +77,7 @@ internal object BankSheetSeed {
         Movement(
             id = "292",
             description = "Aluguel Labubu (13/07)",
-            type = TransactionType.ENTRADA,
+            type = MovementType.ENTRADA,
             payer = "Lameu",
             valueCents = 170000L,
             weights = emptyMap(),
@@ -87,7 +87,7 @@ internal object BankSheetSeed {
         Movement(
             id = "293",
             description = "Aluguel VK 13/07",
-            type = TransactionType.ENTRADA,
+            type = MovementType.ENTRADA,
             payer = "VK",
             valueCents = 31269L,
             weights = emptyMap(),
@@ -97,7 +97,7 @@ internal object BankSheetSeed {
         Movement(
             id = "294",
             description = "Aluguel",
-            type = TransactionType.ENTRADA,
+            type = MovementType.ENTRADA,
             payer = "Massa",
             valueCents = 87300L,
             weights = emptyMap(),
@@ -107,7 +107,7 @@ internal object BankSheetSeed {
         Movement(
             id = "295",
             description = "Mensalidade ARU Julho",
-            type = TransactionType.COLETIVO,
+            type = MovementType.COLETIVO,
             payer = "Du",
             valueCents = 4500L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 1.0, "Pico" to 1.0, "LL" to 1.0, "Du" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "Massa" to 1.0, "VK" to 1.0, "Cansado" to 1.0, "Prazer" to 1.0, "Picasso" to 1.0),
@@ -117,7 +117,7 @@ internal object BankSheetSeed {
         Movement(
             id = "296",
             description = "Aluguel piter",
-            type = TransactionType.ENTRADA,
+            type = MovementType.ENTRADA,
             payer = "Peter",
             valueCents = 80000L,
             weights = emptyMap(),
@@ -127,7 +127,7 @@ internal object BankSheetSeed {
         Movement(
             id = "297",
             description = "Pf",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "LL",
             valueCents = 9893L,
             weights = mapOf("Pico" to 1.0),
@@ -137,7 +137,7 @@ internal object BankSheetSeed {
         Movement(
             id = "298",
             description = "aluguel M",
-            type = TransactionType.ENTRADA,
+            type = MovementType.ENTRADA,
             payer = "Michel",
             valueCents = 55076L,
             weights = emptyMap(),
@@ -147,7 +147,7 @@ internal object BankSheetSeed {
         Movement(
             id = "299",
             description = "Netflix (Julho)",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Leozin",
             valueCents = 5990L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 1.0, "LL" to 2.0, "Carlos" to 1.0),
@@ -157,7 +157,7 @@ internal object BankSheetSeed {
         Movement(
             id = "300",
             description = "MEGA LIXO (14/07)",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Leozin",
             valueCents = 8900L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 7.0, "Peter" to 1.0, "Gab" to 5.0, "Picasso" to 5.0),
@@ -167,7 +167,7 @@ internal object BankSheetSeed {
         Movement(
             id = "301",
             description = "Strogonoff",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Leozin",
             valueCents = 9509L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 2.0, "Pico" to 1.0, "LL" to 1.0, "Gab" to 1.0, "Mixirica" to 1.0, "Massa" to 1.0, "Picasso" to 1.0, "Nicole" to 1.0),
@@ -177,7 +177,7 @@ internal object BankSheetSeed {
         Movement(
             id = "302",
             description = "Refri (14/07)",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Leozin",
             valueCents = 2200L,
             weights = mapOf("Leozin" to 1.0, "Picasso" to 1.0),
@@ -187,7 +187,7 @@ internal object BankSheetSeed {
         Movement(
             id = "303",
             description = "Projeto saúde",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Pico",
             valueCents = 30000L,
             weights = mapOf("Leozin" to 1.0, "LL" to 1.0, "Du" to 1.0),
@@ -197,7 +197,7 @@ internal object BankSheetSeed {
         Movement(
             id = "304",
             description = "Refris e Pães Churrasco (Aniverssário da Rep)",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "VK",
             valueCents = 13371L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 2.0, "Pico" to 2.0, "LL" to 1.0, "Du" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "VK" to 1.0, "Cansado" to 1.0, "Prazer" to 1.0, "Picasso" to 1.0),
@@ -207,7 +207,7 @@ internal object BankSheetSeed {
         Movement(
             id = "305",
             description = "Aluguel Cansado",
-            type = TransactionType.ENTRADA,
+            type = MovementType.ENTRADA,
             payer = "Cansado",
             valueCents = 103900L,
             weights = emptyMap(),
@@ -217,7 +217,7 @@ internal object BankSheetSeed {
         Movement(
             id = "306",
             description = "Marmita pague menos",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "VK",
             valueCents = 2250L,
             weights = mapOf("Cansado" to 1.0),
@@ -227,7 +227,7 @@ internal object BankSheetSeed {
         Movement(
             id = "307",
             description = "Sorvete oxxo",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Pico",
             valueCents = 7900L,
             weights = mapOf("Leozin" to 2.0, "Pico" to 1.0, "Anaju" to 1.0, "Anhê" to 1.0, "Nicole" to 1.0),
@@ -237,7 +237,7 @@ internal object BankSheetSeed {
         Movement(
             id = "308",
             description = "aluguel gu",
-            type = TransactionType.ENTRADA,
+            type = MovementType.ENTRADA,
             payer = "Gu",
             valueCents = 78200L,
             weights = emptyMap(),
@@ -247,7 +247,7 @@ internal object BankSheetSeed {
         Movement(
             id = "309",
             description = "YouTube Premium Agosto",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Leozin",
             valueCents = 5390L,
             weights = mapOf("Leozin" to 1.0, "Pico" to 1.0, "LL" to 1.0, "Du" to 1.0, "Gab" to 1.0, "Massa" to 1.0),
@@ -257,7 +257,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row22",
             description = "Carne Churrasco (Aniverssário da Rep)",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Lameu",
             valueCents = 19090L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 1.0, "Pico" to 2.0, "LL" to 1.0, "Michel" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "VK" to 1.0, "Cansado" to 1.0, "Prazer" to 1.0, "Picasso" to 1.0),
@@ -267,7 +267,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row23",
             description = "Pagmenos Churrasco (Aniverssário da Rep)",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Lameu",
             valueCents = 34643L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 2.0, "Pico" to 2.0, "LL" to 1.0, "Du" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "VK" to 1.0, "Cansado" to 1.0, "Prazer" to 1.0, "Picasso" to 1.0),
@@ -277,7 +277,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row24",
             description = "Carvão Churrasco (Aniverssário da Rep)",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Lameu",
             valueCents = 3999L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 2.0, "Pico" to 2.0, "LL" to 1.0, "Du" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "VK" to 1.0, "Cansado" to 1.0, "Prazer" to 1.0, "Picasso" to 1.0),
@@ -287,7 +287,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row25",
             description = "Fita dupla face e tela para churrasqueira",
-            type = TransactionType.COLETIVO,
+            type = MovementType.COLETIVO,
             payer = "Lameu",
             valueCents = 3500L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 1.0, "Pico" to 1.0, "LL" to 1.0, "Du" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "Massa" to 1.0, "VK" to 1.0, "Cansado" to 1.0, "Prazer" to 1.0, "Picasso" to 1.0),
@@ -297,7 +297,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row26",
             description = "Impressões do mural de moradores",
-            type = TransactionType.COLETIVO,
+            type = MovementType.COLETIVO,
             payer = "Lameu",
             valueCents = 1480L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 1.0, "Pico" to 1.0, "LL" to 1.0, "Du" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "Massa" to 1.0, "VK" to 1.0, "Cansado" to 1.0, "Prazer" to 1.0, "Picasso" to 1.0),
@@ -307,7 +307,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row27",
             description = "Água com vencimento em 07/08",
-            type = TransactionType.COLETIVO,
+            type = MovementType.COLETIVO,
             payer = "Caix. Déb/PIX",
             valueCents = 161484L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 1.0, "Pico" to 1.0, "LL" to 1.0, "Du" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "Massa" to 1.0, "VK" to 1.0, "Cansado" to 1.0, "Prazer" to 1.0, "Picasso" to 1.0),
@@ -317,7 +317,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row28",
             description = "Cerveja Alcorridas (Aniverssário da Rep)",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Pico",
             valueCents = 10200L,
             weights = mapOf("Lameu" to 1.0, "Pico" to 2.0, "LL" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "VK" to 1.0, "Picasso" to 1.0),
@@ -327,7 +327,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row29",
             description = "CPFL Julho",
-            type = TransactionType.COLETIVO,
+            type = MovementType.COLETIVO,
             payer = "Du",
             valueCents = 87249L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 1.0, "Pico" to 1.0, "LL" to 1.0, "Du" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "Massa" to 1.0, "VK" to 1.0, "Cansado" to 1.0, "Prazer" to 1.0, "Picasso" to 1.0),
@@ -337,7 +337,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row30",
             description = "Correção energia Julho",
-            type = TransactionType.COLETIVO,
+            type = MovementType.COLETIVO,
             payer = "Caix. Déb/PIX",
             valueCents = -65000L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 1.0, "Pico" to 1.0, "LL" to 1.0, "Du" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "Massa" to 1.0, "VK" to 1.0, "Cansado" to 1.0, "Prazer" to 1.0, "Picasso" to 1.0),
@@ -347,7 +347,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row31",
             description = "Aluguel Picasso",
-            type = TransactionType.ENTRADA,
+            type = MovementType.ENTRADA,
             payer = "Picasso",
             valueCents = 40000L,
             weights = emptyMap(),
@@ -357,7 +357,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row32",
             description = "Rendimentos Conta Mercado Pago",
-            type = TransactionType.ENTRADA,
+            type = MovementType.ENTRADA,
             payer = "Ext. (PIX)",
             valueCents = 1394L,
             weights = emptyMap(),
@@ -367,7 +367,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row33",
             description = "Camiseta Repostinho 2026",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Helena",
             valueCents = 10490L,
             weights = mapOf("Gu" to 1.0),
@@ -377,7 +377,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row34",
             description = "CPFL Agosto",
-            type = TransactionType.COLETIVO,
+            type = MovementType.COLETIVO,
             payer = "Du",
             valueCents = 63067L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 1.0, "Pico" to 1.0, "LL" to 1.0, "Du" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "Massa" to 1.0, "VK" to 1.0, "Cansado" to 1.0, "Prazer" to 1.0, "Picasso" to 1.0),
@@ -387,7 +387,7 @@ internal object BankSheetSeed {
         Movement(
             id = "310",
             description = "Ragu",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "LL",
             valueCents = 1299L,
             weights = mapOf("Peter" to 1.0),
@@ -397,7 +397,7 @@ internal object BankSheetSeed {
         Movement(
             id = "311",
             description = "Pagmenos 31/07",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "LL",
             valueCents = 1828L,
             weights = mapOf("Gab" to 1.0),
@@ -407,7 +407,7 @@ internal object BankSheetSeed {
         Movement(
             id = "312",
             description = "Shampoo",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "LL",
             valueCents = 2990L,
             weights = mapOf("Lameu" to 1.0),
@@ -417,7 +417,7 @@ internal object BankSheetSeed {
         Movement(
             id = "313",
             description = "subway",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "LL",
             valueCents = 1720L,
             weights = mapOf("Lameu" to 1.0),
@@ -427,7 +427,7 @@ internal object BankSheetSeed {
         Movement(
             id = "314",
             description = "Churrasco (Carvao e farofa)",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "LL",
             valueCents = 5796L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 1.0, "Pico" to 1.0, "LL" to 1.0, "Michel" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "VK" to 1.0, "Cansado" to 1.0, "Prazer" to 1.0, "Picasso" to 1.0),
@@ -437,7 +437,7 @@ internal object BankSheetSeed {
         Movement(
             id = "315",
             description = "Aluguel agosto",
-            type = TransactionType.ENTRADA,
+            type = MovementType.ENTRADA,
             payer = "LL",
             valueCents = 75184L,
             weights = emptyMap(),
@@ -447,7 +447,7 @@ internal object BankSheetSeed {
         Movement(
             id = "316",
             description = "sinuca agosto",
-            type = TransactionType.COLETIVO,
+            type = MovementType.COLETIVO,
             payer = "Michel",
             valueCents = 20000L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 1.0, "Pico" to 1.0, "LL" to 1.0, "Du" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "Massa" to 1.0, "VK" to 1.0, "Cansado" to 1.0, "Prazer" to 1.0, "Picasso" to 1.0),
@@ -457,7 +457,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row42",
             description = "Internet Agosto",
-            type = TransactionType.COLETIVO,
+            type = MovementType.COLETIVO,
             payer = "VK",
             valueCents = 16198L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 1.0, "Pico" to 1.0, "LL" to 1.0, "Du" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 1.0, "Gu" to 1.0, "Mixirica" to 1.0, "Massa" to 1.0, "VK" to 1.0, "Cansado" to 1.0, "Prazer" to 1.0, "Picasso" to 1.0),
@@ -467,7 +467,7 @@ internal object BankSheetSeed {
         Movement(
             id = "317",
             description = "Spotify",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Gab",
             valueCents = 2000L,
             weights = mapOf("LL" to 1.0, "Michel" to 1.0, "Peter" to 1.0),
@@ -477,7 +477,7 @@ internal object BankSheetSeed {
         Movement(
             id = "318",
             description = "Camiseta rep 2/3",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Gab",
             valueCents = 3490L,
             weights = mapOf("Prazer" to 1.0),
@@ -487,7 +487,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row45",
             description = "Aluguel Major",
-            type = TransactionType.ENTRADA,
+            type = MovementType.ENTRADA,
             payer = "Gu",
             valueCents = 84729L,
             weights = emptyMap(),
@@ -497,7 +497,7 @@ internal object BankSheetSeed {
         Movement(
             id = "row46",
             description = "Mega lixo (09/07)",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "Caix. Déb/PIX",
             valueCents = 8900L,
             weights = mapOf("Lameu" to 1.0, "Leozin" to 1.0, "Pico" to 1.0),
@@ -507,7 +507,7 @@ internal object BankSheetSeed {
         Movement(
             id = "319",
             description = "Batata bronco 11/08",
-            type = TransactionType.PRIVADO,
+            type = MovementType.PRIVADO,
             payer = "VK",
             valueCents = 3700L,
             weights = mapOf("Pico" to 1.0, "VK" to 1.0),
@@ -517,7 +517,7 @@ internal object BankSheetSeed {
         Movement(
             id = "320",
             description = "Aluguel",
-            type = TransactionType.ENTRADA,
+            type = MovementType.ENTRADA,
             payer = "Massa",
             valueCents = 64900L,
             weights = emptyMap(),

@@ -3,9 +3,11 @@ package com.mach.apps.repostinho.presentation
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +29,7 @@ private enum class BancoTab(val label: String) {
     CAIXINHA("Caixinha")
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BancoScreen(
     balances: List<MemberBalance>,
@@ -34,6 +37,8 @@ fun BancoScreen(
     caixinha: List<CaixinhaLine>,
     currentMemberName: String,
     syncState: SyncState,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selected by remember { mutableStateOf(BancoTab.SALDOS) }
@@ -51,25 +56,32 @@ fun BancoScreen(
             }
         }
 
-        val content = Modifier.fillMaxSize().padding(horizontal = 16.dp)
+        // O gesto envolve só o conteúdo: as abas ficam paradas enquanto a lista desce.
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            val content = Modifier.fillMaxSize().padding(horizontal = 16.dp)
 
-        when (selected) {
-            BancoTab.SALDOS -> SaldosScreen(
-                balances = balances,
-                currentMemberName = currentMemberName,
-                modifier = content
-            )
+            when (selected) {
+                BancoTab.SALDOS -> SaldosScreen(
+                    balances = balances,
+                    currentMemberName = currentMemberName,
+                    modifier = content
+                )
 
-            BancoTab.LANCAMENTOS -> LancamentosScreen(
-                movements = movements,
-                currentMemberName = currentMemberName,
-                modifier = content
-            )
+                BancoTab.LANCAMENTOS -> LancamentosScreen(
+                    movements = movements,
+                    currentMemberName = currentMemberName,
+                    modifier = content
+                )
 
-            BancoTab.CAIXINHA -> CaixinhaScreen(
-                lines = caixinha,
-                modifier = content
-            )
+                BancoTab.CAIXINHA -> CaixinhaScreen(
+                    lines = caixinha,
+                    modifier = content
+                )
+            }
         }
     }
 }

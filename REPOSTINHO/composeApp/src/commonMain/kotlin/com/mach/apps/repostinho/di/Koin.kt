@@ -1,10 +1,8 @@
 package com.mach.apps.repostinho.di
 
-import com.mach.apps.repostinho.data.repository.BankSettingsRepository
 import com.mach.apps.repostinho.data.repository.BankSheetRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
 import com.mach.apps.repostinho.data.repository.EventRepository
-import com.mach.apps.repostinho.data.repository.InMemoryBankSettingsRepository
 import com.mach.apps.repostinho.data.remote.BankApi
 import com.mach.apps.repostinho.data.repository.InMemoryChoreRepository
 import com.mach.apps.repostinho.data.repository.InMemoryEventRepository
@@ -16,11 +14,9 @@ import org.koin.core.context.startKoin
 import org.koin.dsl.module
 
 val appModule = module {
-    // Repositórios em memória: rodam sem projeto no Firebase, mas perdem os dados ao fechar o app.
-    // Quando o projeto no Firebase existir (e o google-services.json estiver em composeApp/),
-    // troque estas linhas pelas implementações do Firestore.
+    // Moradores, tarefas e eventos ainda são fixos no código e se perdem ao fechar o app.
+    // Só o banco tem fonte de verdade fora dele (a planilha).
     single<ResidentRepository> { InMemoryResidentRepository() }
-    single<BankSettingsRepository> { InMemoryBankSettingsRepository() }
     single<ChoreRepository> { InMemoryChoreRepository() }
     single<EventRepository> { InMemoryEventRepository() }
 
@@ -31,7 +27,7 @@ val appModule = module {
     single<BankSheetRepository> { RemoteBankSheetRepository(get()) }
 
     // ViewModel (no KMP usamos o Compose ViewModel ou bibliotecas como Voyager/Decompose)
-    factory { DashboardViewModel(get(), get(), get(), get(), get()) }
+    factory { DashboardViewModel(get(), get(), get(), get()) }
 }
 
 // Função para inicializar o Koin (chamada no Android e iOS)

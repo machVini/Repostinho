@@ -10,6 +10,17 @@ import kotlinx.serialization.Serializable
  * ninguém sabe qual dos dois está certo.
  */
 
+/**
+ * A coluna "Tipo" da planilha.
+ *
+ * Os nomes das constantes são o que trafega no JSON do `banco-api`; renomear uma exige
+ * mexer no Worker junto.
+ */
+@Serializable
+enum class MovementType {
+    PRIVADO, COLETIVO, SAIDA, ENTRADA
+}
+
 /** Uma linha da aba `Saldos_pessoas`. */
 @Serializable
 data class MemberBalance(
@@ -28,7 +39,7 @@ data class MemberBalance(
 data class Movement(
     val id: String,
     val description: String,
-    val type: TransactionType,
+    val type: MovementType,
     /**
      * Nem sempre é morador: a planilha também lança em nome dos caixas
      * (`Caix. Déb/PIX`, `Ext. (PIX)`), então aqui é texto livre, não um id.

@@ -2,14 +2,12 @@ package com.mach.apps.repostinho.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mach.apps.repostinho.data.model.BankSettings
 import com.mach.apps.repostinho.data.model.CaixinhaLine
 import com.mach.apps.repostinho.data.model.ChoreTask
 import com.mach.apps.repostinho.data.model.MemberBalance
 import com.mach.apps.repostinho.data.model.Movement
 import com.mach.apps.repostinho.data.model.RepEvent
 import com.mach.apps.repostinho.data.model.Resident
-import com.mach.apps.repostinho.data.repository.BankSettingsRepository
 import com.mach.apps.repostinho.data.repository.BankSheetRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
 import com.mach.apps.repostinho.data.repository.EventRepository
@@ -26,7 +24,6 @@ import kotlinx.coroutines.launch
 
 data class BankUiState(
     val residents: List<Resident> = emptyList(),
-    val settings: BankSettings = BankSettings(),
     /** Quem está usando o app. Fixo no VK enquanto não existe login. */
     val currentResidentId: String = InMemoryResidentRepository.CURRENT_USER_ID
 ) {
@@ -46,6 +43,9 @@ data class SheetUiState(
     val caixinha: List<CaixinhaLine> = emptyList(),
     val syncState: SyncState = SyncState.Loading
 ) {
+    /** Move o indicador do "puxar para atualizar". */
+    val isRefreshing: Boolean get() = syncState is SyncState.Loading
+
     val activeMembers: List<MemberBalance> get() = balances.filter { !it.isFormer }
 
     val myBalanceCents: Long?
@@ -66,7 +66,6 @@ data class SheetUiState(
 
 class DashboardViewModel(
     private val residentRepository: ResidentRepository,
-    private val settingsRepository: BankSettingsRepository,
     private val choreRepository: ChoreRepository,
     private val eventRepository: EventRepository,
     private val bankSheetRepository: BankSheetRepository
@@ -77,14 +76,9 @@ class DashboardViewModel(
 
     val uiState: StateFlow<BankUiState> = combine(
         residentRepository.getResidents(),
-        settingsRepository.getSettings(),
         currentResidentId
-    ) { residents, settings, currentId ->
-        BankUiState(
-            residents = residents,
-            settings = settings,
-            currentResidentId = currentId
-        )
+    ) { residents, currentId ->
+        BankUiState(residents = residents, currentResidentId = currentId)
     }
         .catch { emit(BankUiState()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BankUiState())
@@ -105,12 +99,6 @@ class DashboardViewModel(
         .catch { emit(SheetUiState()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SheetUiState())
 
-    init {
-        // Uma busca por abertura do app. A planilha muda algumas vezes por semana, então
-        // não compensa ficar reconsultando durante a sessão.
-        viewModelScope.launch { bankSheetRepository.refresh() }
-    }
-
     val tasks: StateFlow<List<ChoreTask>> = choreRepository.getTasks()
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -118,6 +106,17 @@ class DashboardViewModel(
     val events: StateFlow<List<RepEvent>> = eventRepository.getEvents()
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    init {
+        // Uma busca por abertura do app; durante a sessão, quem decide é o morador,
+        // puxando a lista para baixo.
+        refreshSheet()
+    }
+
+    /** Rebusca a planilha. Ligado ao "puxar para atualizar" da Home e do Banco. */
+    fun refreshSheet() {
+        viewModelScope.launch { bankSheetRepository.refresh() }
+    }
 
     /** Só a tarefa do próprio morador pode ser marcada; as outras são consulta. */
     fun setTaskDone(taskId: String, done: Boolean) {

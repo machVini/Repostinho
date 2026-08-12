@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -18,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.mach.apps.repostinho.data.model.ChoreTask
 import com.mach.apps.repostinho.ui.positiveColor
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     state: BankUiState,
@@ -25,11 +28,30 @@ fun HomeScreen(
     tasks: List<ChoreTask>,
     onGoToBanco: () -> Unit,
     onGoToTarefas: () -> Unit,
+    onRefresh: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val myTask = tasks.firstOrNull { state.currentResidentId in it.assigneeIds }
 
-    LazyColumn(modifier = modifier.fillMaxWidth()) {
+    PullToRefreshBox(
+        isRefreshing = sheet.isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier
+    ) {
+        HomeContent(state, sheet, tasks, myTask, onGoToBanco, onGoToTarefas)
+    }
+}
+
+@Composable
+private fun HomeContent(
+    state: BankUiState,
+    sheet: SheetUiState,
+    tasks: List<ChoreTask>,
+    myTask: ChoreTask?,
+    onGoToBanco: () -> Unit,
+    onGoToTarefas: () -> Unit
+) {
+    LazyColumn(modifier = Modifier.fillMaxWidth()) {
         item {
             Column(modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) {
                 Text(
