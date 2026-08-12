@@ -2,8 +2,10 @@ package com.mach.apps.repostinho.di
 
 import com.mach.apps.repostinho.data.repository.BankSettingsRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
+import com.mach.apps.repostinho.data.repository.EventRepository
 import com.mach.apps.repostinho.data.repository.InMemoryBankSettingsRepository
 import com.mach.apps.repostinho.data.repository.InMemoryChoreRepository
+import com.mach.apps.repostinho.data.repository.InMemoryEventRepository
 import com.mach.apps.repostinho.data.repository.InMemoryResidentRepository
 import com.mach.apps.repostinho.data.repository.InMemoryTransactionRepository
 import com.mach.apps.repostinho.data.repository.ResidentRepository
@@ -24,9 +26,10 @@ val appModule = module {
     single<ResidentRepository> { InMemoryResidentRepository() }
     single<BankSettingsRepository> { InMemoryBankSettingsRepository() }
     single<ChoreRepository> { InMemoryChoreRepository() }
+    single<EventRepository> { InMemoryEventRepository() }
 
     // ViewModel (no KMP usamos o Compose ViewModel ou bibliotecas como Voyager/Decompose)
-    factory { DashboardViewModel(get(), get(), get(), get(), get()) }
+    factory { DashboardViewModel(get(), get(), get(), get(), get(), get()) }
 }
 
 // Função para inicializar o Koin (chamada no Android e iOS)

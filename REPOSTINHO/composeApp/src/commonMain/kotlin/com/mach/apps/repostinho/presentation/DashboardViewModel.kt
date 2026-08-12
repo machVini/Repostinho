@@ -4,11 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mach.apps.repostinho.data.model.BankSettings
 import com.mach.apps.repostinho.data.model.ChoreTask
+import com.mach.apps.repostinho.data.model.RepEvent
 import com.mach.apps.repostinho.data.model.Resident
 import com.mach.apps.repostinho.data.model.Transaction
 import com.mach.apps.repostinho.data.model.TransactionType
 import com.mach.apps.repostinho.data.repository.BankSettingsRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
+import com.mach.apps.repostinho.data.repository.EventRepository
 import com.mach.apps.repostinho.data.repository.InMemoryResidentRepository
 import com.mach.apps.repostinho.data.repository.ResidentRepository
 import com.mach.apps.repostinho.data.repository.TransactionRepository
@@ -53,6 +55,7 @@ class DashboardViewModel(
     private val residentRepository: ResidentRepository,
     private val settingsRepository: BankSettingsRepository,
     private val choreRepository: ChoreRepository,
+    private val eventRepository: EventRepository,
     private val calculator: BalanceCalculator
 ) : ViewModel() {
 
@@ -84,6 +87,10 @@ class DashboardViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BankUiState())
 
     val tasks: StateFlow<List<ChoreTask>> = choreRepository.getTasks()
+        .catch { emit(emptyList()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val events: StateFlow<List<RepEvent>> = eventRepository.getEvents()
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 

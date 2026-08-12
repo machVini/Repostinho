@@ -1,5 +1,6 @@
 package com.mach.apps.repostinho.presentation
 
+import com.mach.apps.repostinho.data.model.RepEvent
 import kotlin.math.abs
 import kotlin.math.roundToLong
 
@@ -44,4 +45,32 @@ fun parseBrlToCents(input: String): Long? {
 
     val value = normalized.toDoubleOrNull() ?: return null
     return (value * 100).roundToLong()
+}
+
+/*
+ * Nomes de mês escritos à mão porque não há `kotlinx-datetime` no projeto e o
+ * `java.time` não existe no alvo iOS.
+ */
+private val MONTHS = listOf(
+    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
+)
+
+/** Índice do mês vem 1-based; fora da faixa devolve vazio em vez de estourar. */
+private fun monthName(month: Int): String = MONTHS.getOrElse(month - 1) { "" }
+
+fun monthAbbrev(month: Int): String = monthName(month).take(3).uppercase()
+
+/**
+ * "15 de agosto" para um dia só, "19 a 22 de novembro" quando o evento se estende dentro
+ * do mesmo mês, e "30 de novembro a 2 de dezembro" quando atravessa a virada.
+ */
+fun formatEventPeriod(event: RepEvent): String = when {
+    !event.isMultiDay -> "${event.start.day} de ${monthName(event.start.month)}"
+
+    event.start.month == event.end.month ->
+        "${event.start.day} a ${event.end.day} de ${monthName(event.start.month)}"
+
+    else -> "${event.start.day} de ${monthName(event.start.month)} a " +
+        "${event.end.day} de ${monthName(event.end.month)}"
 }
