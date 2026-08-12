@@ -127,6 +127,29 @@ export function readCaixinha(sheet) {
   return out;
 }
 
+/**
+ * "12/08/2026 02:52", no fuso de Campinas.
+ *
+ * Data e hora são formatadas separadamente porque o `pt-BR` junta as duas com vírgula
+ * quando pedidas de uma vez.
+ */
+function formatLabel(date) {
+  const zone = { timeZone: "America/Sao_Paulo" };
+  const day = new Intl.DateTimeFormat("pt-BR", {
+    ...zone,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+  const time = new Intl.DateTimeFormat("pt-BR", {
+    ...zone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+  return `${day} ${time}`;
+}
+
 function json(body, status, extraHeaders = {}) {
   return new Response(JSON.stringify(body), {
     status,
@@ -192,13 +215,7 @@ export default {
       generatedAt: now.toISOString(),
       // Formatado aqui porque o app não tem biblioteca de data: converter UTC para o
       // fuso de Campinas no Kotlin/Native custaria uma dependência inteira.
-      generatedAtLabel: new Intl.DateTimeFormat("pt-BR", {
-        timeZone: "America/Sao_Paulo",
-        day: "2-digit",
-        month: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(now),
+      generatedAtLabel: formatLabel(now),
       balances: [
         ...readBalances(balancesSheet, BALANCES_CURRENT, false),
         ...readBalances(balancesSheet, BALANCES_FORMER, true),

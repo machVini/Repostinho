@@ -101,18 +101,18 @@ private fun SyncBanner(syncState: SyncState) {
         // A data pode vir vazia se o banco-api publicado for anterior ao campo, ou se o
         // cache tiver sido gravado nessa época. A frase precisa continuar de pé sem ela.
         is SyncState.Live -> {
-            val when_ = syncState.generatedAtLabel
-            val text = if (when_.isBlank()) "Atualizado agora"
-            else "Atualizado agora · planilha de $when_"
+            val text = syncState.generatedAtLabel.takeIf { it.isNotBlank() }
+                ?.let { "Última atualização: $it" }
+                ?: "Atualizado agora"
             text to MaterialTheme.colorScheme.onSurfaceVariant
         }
 
-        // A data é o que importa aqui: sem ela, "sem conexão" não diz se o número é de dez
-        // minutos ou de duas semanas atrás.
+        // O "sem conexão" fica junto da data: só o horário não diz se o app tentou
+        // rebuscar e falhou, ou se aquele é mesmo o estado atual da planilha.
         is SyncState.Cached -> {
-            val when_ = syncState.generatedAtLabel
-            val text = if (when_.isBlank()) "Sem conexão — mostrando a última cópia"
-            else "Sem conexão — dados de $when_"
+            val text = syncState.generatedAtLabel.takeIf { it.isNotBlank() }
+                ?.let { "Sem conexão · Última atualização: $it" }
+                ?: "Sem conexão — mostrando a última cópia"
             text to MaterialTheme.colorScheme.error
         }
 

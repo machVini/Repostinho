@@ -8,15 +8,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mach.apps.repostinho.ui.RepIcons
 import com.mach.apps.repostinho.data.model.ChoreTask
 import com.mach.apps.repostinho.ui.positiveColor
 
@@ -77,6 +85,9 @@ private fun HomeContent(
 @Composable
 private fun MyBalanceCard(sheet: SheetUiState, onGoToBanco: () -> Unit) {
     val balance = sheet.myBalanceCents ?: 0L
+    // Escolha da sessão: fechar o app volta a mostrar. Guardar isso exigiria persistir
+    // preferência, que o app ainda não tem.
+    var hidden by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -86,12 +97,31 @@ private fun MyBalanceCard(sheet: SheetUiState, onGoToBanco: () -> Unit) {
         )
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Text("Meu saldo", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Meu saldo", style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = { hidden = !hidden }) {
+                    Icon(
+                        imageVector = if (hidden) RepIcons.EyeOpen else RepIcons.EyeClosed,
+                        contentDescription = if (hidden) "Mostrar o saldo"
+                        else "Esconder o saldo"
+                    )
+                }
+            }
+
             Text(
-                text = formatBrl(balance),
+                text = if (hidden) MASK else formatBrl(balance),
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
-                color = if (balance < 0) MaterialTheme.colorScheme.error else positiveColor()
+                // Escondido, a cor entregaria o sinal do saldo — some junto com o valor.
+                color = when {
+                    hidden -> MaterialTheme.colorScheme.onPrimaryContainer
+                    balance < 0 -> MaterialTheme.colorScheme.error
+                    else -> positiveColor()
+                }
             )
             TextButton(onClick = onGoToBanco) {
                 Text("Ver o banco", fontWeight = FontWeight.Bold)
@@ -99,6 +129,8 @@ private fun MyBalanceCard(sheet: SheetUiState, onGoToBanco: () -> Unit) {
         }
     }
 }
+
+private const val MASK = "R$ ••••••"
 
 @Composable
 private fun MyTaskCard(
