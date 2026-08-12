@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mach.apps.repostinho.data.model.RepEvent
+import com.mach.apps.repostinho.ui.accentColor
 
 @Composable
 fun CalendarioScreen(
@@ -57,16 +58,19 @@ fun CalendarioScreen(
                         modifier = Modifier.width(48.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        // Selo em ouro: é o que dá cor própria a uma tela que, no escuro,
+                        // seria toda azul.
                         Text(
                             text = event.start.day.toString(),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
+                            color = accentColor(),
                             textAlign = TextAlign.Center
                         )
                         Text(
                             text = monthAbbrev(event.start.month),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = accentColor(),
                             textAlign = TextAlign.Center
                         )
                     }

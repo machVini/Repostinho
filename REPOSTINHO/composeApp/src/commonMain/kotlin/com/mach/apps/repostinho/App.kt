@@ -3,6 +3,7 @@ package com.mach.apps.repostinho
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,6 +33,7 @@ import com.mach.apps.repostinho.presentation.HomeScreen
 import com.mach.apps.repostinho.presentation.PerfilScreen
 import com.mach.apps.repostinho.presentation.SheetUiState
 import com.mach.apps.repostinho.presentation.TarefasScreen
+import com.mach.apps.repostinho.ui.AutoSizeLabel
 import com.mach.apps.repostinho.ui.RepIcons
 import com.mach.apps.repostinho.ui.RepostinhoTheme
 import com.mach.apps.repostinho.ui.barContainerColor
@@ -65,6 +67,7 @@ fun App() {
             val sheet by viewModel.sheet.collectAsStateWithLifecycle()
             val tasks by viewModel.tasks.collectAsStateWithLifecycle()
             val events by viewModel.events.collectAsStateWithLifecycle()
+            val notes by viewModel.meetingNotes.collectAsStateWithLifecycle()
 
             var selectedTab by remember { mutableStateOf(AppTab.HOME) }
 
@@ -130,7 +133,13 @@ fun App() {
                                 selected = tab == selectedTab,
                                 onClick = { navigateTo(tab) },
                                 icon = { Icon(tab.icon, contentDescription = tab.label) },
-                                label = { Text(tab.label) },
+                                label = {
+                                    AutoSizeLabel(
+                                        text = tab.label,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                },
                                 colors = NavigationBarItemDefaults.colors(
                                     // O ícone selecionado fica sobre a pílula; o rótulo
                                     // fica sobre a barra.
@@ -155,10 +164,11 @@ fun App() {
                         AppTab.HOME -> HomeScreen(
                             state = state,
                             sheet = sheet,
+                            notes = notes,
                             tasks = tasks,
                             onGoToBanco = { navigateTo(AppTab.BANCO) },
                             onGoToTarefas = { navigateTo(AppTab.TAREFAS) },
-                            onRefresh = viewModel::refreshSheet,
+                            onRefresh = { viewModel.refreshSheet(fresh = true) },
                             modifier = inset
                         )
 
@@ -169,7 +179,7 @@ fun App() {
                             currentMemberName = SheetUiState.CURRENT_MEMBER_NAME,
                             syncState = sheet.syncState,
                             isRefreshing = sheet.isRefreshing,
-                            onRefresh = viewModel::refreshSheet,
+                            onRefresh = { viewModel.refreshSheet(fresh = true) },
                             modifier = full
                         )
 

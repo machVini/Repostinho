@@ -74,15 +74,17 @@ private val DarkColors = darkColorScheme(
     onPrimaryContainer = Color(0xFFD7E3FF),
     inversePrimary = RepBlue,
 
-    secondary = Color(0xFFF5CB4C),
-    onSecondary = Color(0xFF3D2E00),
-    secondaryContainer = Color(0xFF5B4300),
-    onSecondaryContainer = Color(0xFFFFE08C),
+    // Amarelos dessaturados: no escuro, o tom do brasão vira néon e cansa a vista. Estes
+    // puxam para o ouro velho e continuam lendo como amarelo ao lado do azul.
+    secondary = Color(0xFFD8BC70),
+    onSecondary = Color(0xFF3A2E08),
+    secondaryContainer = Color(0xFF4A3D16),
+    onSecondaryContainer = Color(0xFFEFDCA8),
 
-    tertiary = Color(0xFFE0C165),
-    onTertiary = Color(0xFF3D2E00),
-    tertiaryContainer = Color(0xFF684E0B),
-    onTertiaryContainer = Color(0xFFFFDDB3),
+    tertiary = Color(0xFFC9B078),
+    onTertiary = Color(0xFF362B10),
+    tertiaryContainer = Color(0xFF4C3F1C),
+    onTertiaryContainer = Color(0xFFEBDCBC),
 
     background = Color(0xFF131A23),
     onBackground = Color(0xFFDEE3EA),
@@ -95,7 +97,7 @@ private val DarkColors = darkColorScheme(
     inverseOnSurface = Color(0xFF1A2230),
 
     // Fundo azul escuro acinzentado e a rampa subindo em azul: os cards ficam nitidamente
-    // azuis sobre ele. O amarelo, no escuro, vai para as barras.
+    // azuis sobre ele.
     surfaceDim = Color(0xFF0D141D),
     surfaceBright = Color(0xFF33455E),
     surfaceContainerLowest = Color(0xFF0A0F16),
@@ -129,30 +131,50 @@ fun positiveColor(): Color =
     if (LocalDarkTheme.current) Color(0xFF7DD87F) else Color(0xFF2E7D32)
 
 /*
- * Toolbar e menu inferior trocam de cor entre os temas: azul no claro, amarelo no escuro.
- * Como as duas barras leem daqui, elas não têm como divergir uma da outra.
+ * Toolbar e menu inferior: azul da rep no claro, azul-noite no escuro. Como as duas
+ * barras leem daqui, elas não têm como divergir uma da outra.
+ *
+ * No escuro as barras já foram amarelas — o azul do brasão inteiro virava um bloco cítrico
+ * em cima e embaixo da tela. O amarelo continua presente, mas como acento: na pílula do
+ * item selecionado e nos cards de tarefa e evento.
  */
+
+/** Um degrau acima do fundo, para a barra se destacar sem virar outro bloco de cor. */
+private val NightBar = Color(0xFF16263F)
+private val OnNightBar = Color(0xFFE3EAF5)
 
 @Composable
 fun barContainerColor(): Color =
+    if (LocalDarkTheme.current) NightBar else MaterialTheme.colorScheme.primary
+
+@Composable
+fun onBarColor(): Color =
+    if (LocalDarkTheme.current) OnNightBar else MaterialTheme.colorScheme.onPrimary
+
+/**
+ * A pílula do item selecionado.
+ *
+ * Amarela nos dois temas — é ela que dá o acento sobre o azul, e no escuro passou a ser o
+ * lugar principal onde o amarelo aparece. Não precisa mais inverter por tema.
+ */
+@Composable
+fun barIndicatorColor(): Color = MaterialTheme.colorScheme.secondaryContainer
+
+/**
+ * Acento de destaque: ouro no escuro, azul no claro.
+ *
+ * A regra do app é "ouro marca o que está selecionado ou é seu; azul carrega estrutura e
+ * navegação". No claro o azul já é o destaque natural sobre o creme; no escuro tudo é
+ * azul, então o ouro é o que separa. É esta função que dá amarelo a todas as telas no
+ * modo noturno sem espalhar cor sem critério.
+ */
+@Composable
+fun accentColor(): Color =
     if (LocalDarkTheme.current) MaterialTheme.colorScheme.secondary
     else MaterialTheme.colorScheme.primary
 
 @Composable
-fun onBarColor(): Color =
-    if (LocalDarkTheme.current) MaterialTheme.colorScheme.onSecondary
-    else MaterialTheme.colorScheme.onPrimary
-
-/** A pílula do item selecionado inverte junto, senão some dentro da barra. */
-@Composable
-fun barIndicatorColor(): Color =
-    if (LocalDarkTheme.current) MaterialTheme.colorScheme.primaryContainer
-    else MaterialTheme.colorScheme.secondaryContainer
-
-@Composable
-fun onBarIndicatorColor(): Color =
-    if (LocalDarkTheme.current) MaterialTheme.colorScheme.onPrimaryContainer
-    else MaterialTheme.colorScheme.onSecondaryContainer
+fun onBarIndicatorColor(): Color = MaterialTheme.colorScheme.onSecondaryContainer
 
 @Composable
 fun RepostinhoTheme(

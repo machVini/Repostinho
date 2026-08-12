@@ -1,6 +1,7 @@
 package com.mach.apps.repostinho.data.remote
 
 import com.mach.apps.repostinho.data.model.CaixinhaLine
+import com.mach.apps.repostinho.data.model.MeetingNotes
 import com.mach.apps.repostinho.data.model.MemberBalance
 import com.mach.apps.repostinho.data.model.Movement
 import io.ktor.client.HttpClient
@@ -38,17 +39,29 @@ data class BankSheetPayload(
 
 class BankApi(private val client: HttpClient) {
 
-    /** Lança em caso de falha; quem chama decide o que fazer sem rede. */
-    suspend fun fetchSheet(): BankSheetPayload {
+    /**
+     * Lança em caso de falha; quem chama decide o que fazer sem rede.
+     *
+     * [fresh] pede ao banco-api que ignore o cache de borda. É o que o "puxar para
+     * atualizar" usa: sem isso, puxar dentro da janela de cache devolvia o payload
+     * anterior, com o mesmo horário, e parecia não ter feito nada.
+     */
+    suspend fun fetchSheet(fresh: Boolean = false): BankSheetPayload = get("banco", fresh)
+
+    /** As últimas atas na pasta do Drive. Lança em caso de falha. */
+    suspend fun fetchMeetingNotes(fresh: Boolean = false): MeetingNotes = get("atas", fresh)
+
+    private suspend inline fun <reified T> get(path: String, fresh: Boolean): T {
         check(BankApiConfig.isConfigured) {
             "bancoApi.baseUrl ausente no local.properties"
         }
 
-        val response = client.get("${BankApiConfig.BASE_URL.trimEnd('/')}/banco") {
+        val suffix = if (fresh) "?fresh=1" else ""
+        val response = client.get("${BankApiConfig.BASE_URL.trimEnd('/')}/$path$suffix") {
             header("x-rep-token", BankApiConfig.TOKEN)
         }
         if (!response.status.isSuccess()) {
-            error("banco-api respondeu ${response.status.value}")
+            error("banco-api respondeu ${response.status.value} em /$path")
         }
         return response.body()
     }

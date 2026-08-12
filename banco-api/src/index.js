@@ -13,6 +13,21 @@ import * as XLSX from "xlsx";
 
 const CACHE_SECONDS = 300;
 
+/** Suba isto quando a forma da resposta mudar; invalida o cache de borda. */
+const CACHE_VERSION = "2";
+
+/** Quantas atas o card da Home mostra. */
+const ATAS_COUNT = 3;
+
+/** Quantos arquivos ler antes de ordenar por data de reunião. */
+const ATAS_SCAN = 50;
+
+/**
+ * Mesmo cache do banco. Já foi de 30 minutos, mas isso fazia o "puxar para atualizar"
+ * não trazer uma ata recém-adicionada — o gesto existe justamente para não esperar.
+ */
+const ATAS_CACHE_SECONDS = CACHE_SECONDS;
+
 /** Nomes das abas na planilha. Mudou lá, muda aqui. */
 const SHEET_BALANCES = "Saldos_pessoas";
 const SHEET_MOVEMENTS = "Movimentações";
@@ -150,6 +165,173 @@ function formatLabel(date) {
   return `${day} ${time}`;
 }
 
+const MONTHS_PT = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
+
+/** Tira acento para casar "março" escrito de qualquer jeito. */
+function fold(text) {
+  return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+/**
+ * Data da reunião a partir do nome do arquivo, em epoch ms.
+ *
+ * A data pode estar em qualquer posição do nome, porque na prática as atas aparecem como
+ * "11/08/2026", "Ata Repostinho 18/08/2026" e "18 de agosto de 2026". Devolve `null`
+ * quando não há data reconhecível — aí a ordenação cai para a data de criação no Drive.
+ */
+function meetingDate(name) {
+  const raw = String(name ?? "");
+  const text = fold(raw);
+
+  // ISO primeiro: em "2026-08-18" o regex de barra não casaria, mas o de dia/mês/ano
+  // poderia confundir se o nome misturasse os dois formatos.
+  const iso = /(\d{4})-(\d{1,2})-(\d{1,2})/.exec(raw);
+  if (iso) return utc(iso[1], iso[2], iso[3]);
+
+  const slashed = /(\d{1,2})[/.](\d{1,2})[/.](\d{4})/.exec(raw);
+  if (slashed) return utc(slashed[3], slashed[2], slashed[1]);
+
+  const written = /(\d{1,2})\s+de\s+([a-z]+)\s+de\s+(\d{4})/.exec(text);
+  if (written) {
+    const month = MONTHS_PT.findIndex((m) => fold(m) === written[2]);
+    if (month >= 0) return utc(written[3], month + 1, written[1]);
+  }
+
+  return null;
+}
+
+function utc(year, month, day) {
+  const at = Date.UTC(Number(year), Number(month) - 1, Number(day));
+  return Number.isNaN(at) ? null : at;
+}
+
+/** Ordena da reunião mais recente para a mais antiga e corta em [count]. */
+export function orderAtas(files, count) {
+  return files
+    .map((file) => ({
+      file,
+      // `Date.parse` devolve NaN em data inválida, e NaN quebraria a comparação.
+      at: meetingDate(file.name ?? "") ?? (Date.parse(file.createdTime ?? "") || 0),
+    }))
+    .sort((a, b) => b.at - a.at)
+    .slice(0, count)
+    .map(({ file }) => file);
+}
+
+/**
+ * Lista as atas de reunião na pasta do Drive, da reunião mais recente para a mais antiga.
+ *
+ * A ordem sai do nome do arquivo, não da data de criação no Drive: as atas se chamam
+ * "dd/MM/yyyy", e subir uma ata antiga depois não deve colocá-la no topo do card. Quando
+ * o nome não é uma data, vale a data de criação.
+ *
+ * Por isso a busca traz mais arquivos do que o card mostra — a ordenação é feita aqui,
+ * depois de ler os nomes.
+ */
+async function handleAtas(request, env, ctx) {
+  if (!env.DRIVE_FOLDER_ID || !env.DRIVE_API_KEY) {
+    return json({ error: "DRIVE_FOLDER_ID ou DRIVE_API_KEY não configuradas" }, 500);
+  }
+
+  const cache = caches.default;
+  const key = cacheKey(request, env.DRIVE_FOLDER_ID);
+  if (!wantsFresh(request)) {
+    const cached = await cache.match(key);
+    if (cached) return cached;
+  }
+
+  const query = new URLSearchParams({
+    q: `'${env.DRIVE_FOLDER_ID}' in parents and trashed = false`,
+    orderBy: "createdTime desc",
+    pageSize: String(ATAS_SCAN),
+    fields: "files(id,name,webViewLink,createdTime)",
+    key: env.DRIVE_API_KEY,
+  });
+
+  let listing;
+  try {
+    const upstream = await fetch(`https://www.googleapis.com/drive/v3/files?${query}`);
+    if (!upstream.ok) {
+      const detail = await upstream.text();
+      // 403 aqui costuma ser pasta não compartilhada como "qualquer pessoa com o link":
+      // a chave de API não enxerga o que é restrito a pessoas específicas.
+      return json({ error: `Drive respondeu ${upstream.status}`, detail }, 502);
+    }
+    listing = await upstream.json();
+  } catch (e) {
+    return json({ error: `falha ao listar a pasta: ${e.message}` }, 502);
+  }
+
+  // Pasta sem compartilhamento público devolve 200 com lista vazia, e não 403 — sem esta
+  // checagem, "não tenho permissão" chegaria na tela como "não há atas".
+  if ((listing.files ?? []).length === 0) {
+    const meta = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${env.DRIVE_FOLDER_ID}` +
+        `?fields=id&key=${env.DRIVE_API_KEY}`
+    );
+    if (!meta.ok) {
+      return json(
+        {
+          error: "pasta inacessível pela chave de API",
+          detail:
+            "confira se ela está compartilhada como 'qualquer pessoa com o link' e se " +
+            "o DRIVE_FOLDER_ID está certo",
+        },
+        502
+      );
+    }
+  }
+
+  const payload = {
+    folderUrl: `https://drive.google.com/drive/folders/${env.DRIVE_FOLDER_ID}`,
+    files: orderAtas(listing.files ?? [], ATAS_COUNT).map((file) => ({
+      id: file.id,
+      name: file.name,
+      // webViewLink abre no app do Drive quando ele está instalado, e no navegador
+      // quando não está.
+      url: file.webViewLink ?? `https://drive.google.com/file/d/${file.id}/view`,
+    })),
+  };
+
+  const response = json(payload, 200, {
+    "cache-control": `public, max-age=${ATAS_CACHE_SECONDS}`,
+  });
+  ctx.waitUntil(cache.put(key, response.clone()));
+  return response;
+}
+
+/**
+ * Chave de cache que muda quando a resposta deveria mudar.
+ *
+ * `wrangler deploy` não limpa o cache de borda: uma entrada gravada antes continua sendo
+ * servida até o TTL vencer, mesmo com código ou secret novos. Isso já fez o app mostrar a
+ * pasta errada por meia hora depois de um deploy correto.
+ *
+ * [parts] leva o que, mudando, invalida a resposta — o id da pasta, por exemplo. Para
+ * mudança de código, suba [CACHE_VERSION].
+ */
+function cacheKey(request, ...parts) {
+  const url = new URL(request.url);
+  // Só caminho e versão: parâmetros da chamada (como `fresh`) não podem multiplicar
+  // entradas no cache.
+  url.search = "";
+  url.searchParams.set("v", [CACHE_VERSION, ...parts].join("."));
+  return new Request(url.toString(), { method: "GET" });
+}
+
+/**
+ * O morador puxou a lista para baixo e quer o estado de agora.
+ *
+ * Sem isto, puxar dentro da janela de cache devolvia o mesmo payload com o mesmo horário,
+ * e o gesto parecia não ter feito nada. A abertura normal do app segue usando o cache.
+ */
+function wantsFresh(request) {
+  return new URL(request.url).searchParams.get("fresh") === "1";
+}
+
 function json(body, status, extraHeaders = {}) {
   return new Response(JSON.stringify(body), {
     status,
@@ -160,9 +342,6 @@ function json(body, status, extraHeaders = {}) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.pathname !== "/banco") {
-      return json({ error: "not found" }, 404);
-    }
 
     // Token compartilhado. Isto é obstáculo, não autenticação: ele está no binário do
     // app e pode ser extraído. Serve para o endpoint não ficar aberto a quem topar com
@@ -171,9 +350,17 @@ export default {
       return json({ error: "unauthorized" }, 401);
     }
 
+    if (url.pathname === "/atas") return handleAtas(request, env, ctx);
+    if (url.pathname !== "/banco") {
+      return json({ error: "not found" }, 404);
+    }
+
     const cache = caches.default;
-    const cached = await cache.match(request);
-    if (cached) return cached;
+    const key = cacheKey(request);
+    if (!wantsFresh(request)) {
+      const cached = await cache.match(key);
+      if (cached) return cached;
+    }
 
     if (!env.SHEET_URL) {
       return json({ error: "SHEET_URL não configurada" }, 500);
@@ -227,7 +414,7 @@ export default {
     const response = json(payload, 200, {
       "cache-control": `public, max-age=${CACHE_SECONDS}`,
     });
-    ctx.waitUntil(cache.put(request, response.clone()));
+    ctx.waitUntil(cache.put(key, response.clone()));
     return response;
   },
 };

@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mach.apps.repostinho.data.model.Movement
 import com.mach.apps.repostinho.data.model.MovementType
+import com.mach.apps.repostinho.ui.accentColor
 import com.mach.apps.repostinho.ui.positiveColor
 
 @Composable
@@ -106,6 +107,7 @@ private fun MovementCard(movement: Movement, currentMemberName: String) {
                     text = "Você entrou com ${formatWeight(myWeight)} de peso",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
+                    color = accentColor(),
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }

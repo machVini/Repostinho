@@ -1,6 +1,7 @@
 package com.mach.apps.repostinho.di
 
 import com.mach.apps.repostinho.data.local.BankSheetCache
+import com.mach.apps.repostinho.data.local.MeetingNotesCache
 import com.mach.apps.repostinho.data.local.textFileStore
 import com.mach.apps.repostinho.data.repository.BankSheetRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
@@ -9,7 +10,9 @@ import com.mach.apps.repostinho.data.remote.BankApi
 import com.mach.apps.repostinho.data.repository.InMemoryChoreRepository
 import com.mach.apps.repostinho.data.repository.InMemoryEventRepository
 import com.mach.apps.repostinho.data.repository.InMemoryResidentRepository
+import com.mach.apps.repostinho.data.repository.MeetingNotesRepository
 import com.mach.apps.repostinho.data.repository.RemoteBankSheetRepository
+import com.mach.apps.repostinho.data.repository.RemoteMeetingNotesRepository
 import com.mach.apps.repostinho.data.repository.ResidentRepository
 import com.mach.apps.repostinho.presentation.DashboardViewModel
 import org.koin.core.context.startKoin
@@ -33,8 +36,12 @@ fun appModule(cacheDirectory: String) = module {
     single { BankSheetCache(textFileStore(cacheDirectory)) }
     single<BankSheetRepository> { RemoteBankSheetRepository(get(), get()) }
 
+    // As atas moram numa pasta do Drive; o Worker lista, o app só abre os links.
+    single { MeetingNotesCache(textFileStore(cacheDirectory)) }
+    single<MeetingNotesRepository> { RemoteMeetingNotesRepository(get(), get()) }
+
     // ViewModel (no KMP usamos o Compose ViewModel ou bibliotecas como Voyager/Decompose)
-    factory { DashboardViewModel(get(), get(), get(), get()) }
+    factory { DashboardViewModel(get(), get(), get(), get(), get()) }
 }
 
 // Função para inicializar o Koin (chamada no Android e iOS)

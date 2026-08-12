@@ -8,8 +8,8 @@
 	<string>Repostinho</string>
 	<!--
 		Sem UILaunchScreen o iOS não sabe o que mostrar na abertura. A cor vem do
-		LaunchBackground do catálogo, que tem variante escura: azul no claro e amarelo
-		no escuro, emendando com a toolbar de cada tema.
+		LaunchBackground do catálogo, sem variante escura de propósito: o azul do brasão
+		é a identidade do app, e vale nos dois temas.
 	-->
 	<key>UILaunchScreen</key>
 	<dict>

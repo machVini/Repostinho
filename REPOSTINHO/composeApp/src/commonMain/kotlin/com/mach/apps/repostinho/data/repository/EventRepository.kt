@@ -28,6 +28,7 @@ class InMemoryEventRepository : EventRepository {
         val SEED = listOf(
             RepEvent("lei-do-retorno", "Lei do Retorno", RepDate(15, 8, YEAR)),
             RepEvent("alcorridas", "Alcorridas", RepDate(29, 8, YEAR)),
+            RepEvent("arrecadaru", "ArrecadARU", RepDate(12, 9, YEAR)),
             RepEvent(
                 id = "interreps",
                 name = "InterReps",

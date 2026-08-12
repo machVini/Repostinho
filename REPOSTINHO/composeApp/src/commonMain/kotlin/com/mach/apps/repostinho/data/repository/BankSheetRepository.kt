@@ -36,8 +36,12 @@ interface BankSheetRepository {
     fun getCaixinha(): Flow<List<CaixinhaLine>>
     fun getSyncState(): Flow<SyncState>
 
-    /** Busca a versão atual. Não lança: falha vira [SyncState.Cached] ou [SyncState.Failed]. */
-    suspend fun refresh()
+    /**
+     * Busca a versão atual. Não lança: falha vira [SyncState.Cached] ou [SyncState.Failed].
+     *
+     * [fresh] vem do gesto do morador e ignora o cache de borda.
+     */
+    suspend fun refresh(fresh: Boolean = false)
 }
 
 /**
@@ -71,7 +75,7 @@ class RemoteBankSheetRepository(
     override fun getCaixinha(): Flow<List<CaixinhaLine>> = caixinha.asStateFlow()
     override fun getSyncState(): Flow<SyncState> = syncState.asStateFlow()
 
-    override suspend fun refresh() {
+    override suspend fun refresh(fresh: Boolean) {
         if (!BankApiConfig.isConfigured) {
             fallback("banco-api não configurado")
             return
@@ -79,7 +83,7 @@ class RemoteBankSheetRepository(
 
         syncState.value = SyncState.Loading
         try {
-            val payload = api.fetchSheet()
+            val payload = api.fetchSheet(fresh)
             // Resposta vazia é sintoma de aba renomeada na planilha. Guardar isso no cache
             // apagaria os últimos números bons que o app tinha.
             if (payload.balances.isEmpty()) {
