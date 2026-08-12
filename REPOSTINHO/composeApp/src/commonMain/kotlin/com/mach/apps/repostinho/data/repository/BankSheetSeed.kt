@@ -61,7 +61,7 @@ internal object BankSheetSeed {
             payer = "Caix. Déb/PIX",
             valueCents = 704888L,
             weights = mapOf("Lameu" to 0.8, "Leozin" to 1.1, "Pico" to 1.1, "LL" to 1.1, "Du" to 1.0, "Michel" to 1.0, "Peter" to 1.0, "Gab" to 0.95, "Gu" to 0.95, "Mixirica" to 0.88, "Massa" to 0.88, "VK" to 1.0, "Cansado" to 0.88, "Prazer" to 0.8, "Picasso" to 0.8),
-            totalWeight = 14.240000000000002
+            totalWeight = 14.24
         ),
 
         Movement(

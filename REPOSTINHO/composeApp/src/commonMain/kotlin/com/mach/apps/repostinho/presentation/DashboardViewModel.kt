@@ -15,6 +15,7 @@ import com.mach.apps.repostinho.data.repository.ChoreRepository
 import com.mach.apps.repostinho.data.repository.EventRepository
 import com.mach.apps.repostinho.data.repository.InMemoryResidentRepository
 import com.mach.apps.repostinho.data.repository.ResidentRepository
+import com.mach.apps.repostinho.data.repository.SyncState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -42,7 +43,8 @@ data class BankUiState(
 data class SheetUiState(
     val balances: List<MemberBalance> = emptyList(),
     val movements: List<Movement> = emptyList(),
-    val caixinha: List<CaixinhaLine> = emptyList()
+    val caixinha: List<CaixinhaLine> = emptyList(),
+    val syncState: SyncState = SyncState.Loading
 ) {
     val activeMembers: List<MemberBalance> get() = balances.filter { !it.isFormer }
 
@@ -90,12 +92,24 @@ class DashboardViewModel(
     val sheet: StateFlow<SheetUiState> = combine(
         bankSheetRepository.getBalances(),
         bankSheetRepository.getMovements(),
-        bankSheetRepository.getCaixinha()
-    ) { balances, movements, caixinha ->
-        SheetUiState(balances = balances, movements = movements, caixinha = caixinha)
+        bankSheetRepository.getCaixinha(),
+        bankSheetRepository.getSyncState()
+    ) { balances, movements, caixinha, syncState ->
+        SheetUiState(
+            balances = balances,
+            movements = movements,
+            caixinha = caixinha,
+            syncState = syncState
+        )
     }
         .catch { emit(SheetUiState()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SheetUiState())
+
+    init {
+        // Uma busca por abertura do app. A planilha muda algumas vezes por semana, então
+        // não compensa ficar reconsultando durante a sessão.
+        viewModelScope.launch { bankSheetRepository.refresh() }
+    }
 
     val tasks: StateFlow<List<ChoreTask>> = choreRepository.getTasks()
         .catch { emit(emptyList()) }

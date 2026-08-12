@@ -5,10 +5,11 @@ import com.mach.apps.repostinho.data.repository.BankSheetRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
 import com.mach.apps.repostinho.data.repository.EventRepository
 import com.mach.apps.repostinho.data.repository.InMemoryBankSettingsRepository
-import com.mach.apps.repostinho.data.repository.InMemoryBankSheetRepository
+import com.mach.apps.repostinho.data.remote.BankApi
 import com.mach.apps.repostinho.data.repository.InMemoryChoreRepository
 import com.mach.apps.repostinho.data.repository.InMemoryEventRepository
 import com.mach.apps.repostinho.data.repository.InMemoryResidentRepository
+import com.mach.apps.repostinho.data.repository.RemoteBankSheetRepository
 import com.mach.apps.repostinho.data.repository.ResidentRepository
 import com.mach.apps.repostinho.presentation.DashboardViewModel
 import org.koin.core.context.startKoin
@@ -23,9 +24,11 @@ val appModule = module {
     single<ChoreRepository> { InMemoryChoreRepository() }
     single<EventRepository> { InMemoryEventRepository() }
 
-    // O banco vem da planilha da rep. Hoje é um retrato embutido no app; quando a planilha
-    // for publicada em JSON, só esta linha muda.
-    single<BankSheetRepository> { InMemoryBankSheetRepository() }
+    // O banco vem da planilha da rep, convertida em JSON pelo banco-api. Sem a URL
+    // configurada no local.properties, cai no retrato embutido sozinho.
+    single { BankApi.defaultClient() }
+    single { BankApi(get()) }
+    single<BankSheetRepository> { RemoteBankSheetRepository(get()) }
 
     // ViewModel (no KMP usamos o Compose ViewModel ou bibliotecas como Voyager/Decompose)
     factory { DashboardViewModel(get(), get(), get(), get(), get()) }

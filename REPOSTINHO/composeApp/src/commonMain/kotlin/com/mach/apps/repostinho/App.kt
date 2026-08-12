@@ -166,6 +166,7 @@ fun App() {
                             movements = sheet.movements,
                             caixinha = sheet.caixinha,
                             currentMemberName = SheetUiState.CURRENT_MEMBER_NAME,
+                            syncState = sheet.syncState,
                             modifier = full
                         )
 

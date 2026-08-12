@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -6,6 +7,47 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+}
+
+/*
+ * A URL e o token do banco-api vêm do `local.properties`, que não vai para o git.
+ *
+ * O repositório é público: token commitado é token vazado, e é ele que separa os saldos
+ * da rep da internet inteira. Com as chaves ausentes o app compila e roda usando o
+ * retrato embutido, então quem clonar não fica travado.
+ */
+val bankApiProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
+val generateBankApiConfig by tasks.registering {
+    val outputDir = layout.buildDirectory.dir("generated/bankApi")
+    val baseUrl = bankApiProperties.getProperty("bancoApi.baseUrl").orEmpty()
+    val token = bankApiProperties.getProperty("bancoApi.token").orEmpty()
+
+    inputs.property("baseUrl", baseUrl)
+    inputs.property("token", token)
+    outputs.dir(outputDir)
+
+    doLast {
+        val dir = outputDir.get().asFile
+            .resolve("com/mach/apps/repostinho/data/remote")
+        dir.mkdirs()
+        dir.resolve("BankApiConfig.kt").writeText(
+            """
+            package com.mach.apps.repostinho.data.remote
+
+            // Gerado pelo Gradle a partir do local.properties. Não edite à mão.
+            internal object BankApiConfig {
+                const val BASE_URL = "$baseUrl"
+                const val TOKEN = "$token"
+                val isConfigured: Boolean get() = BASE_URL.isNotBlank()
+            }
+
+            """.trimIndent()
+        )
+    }
 }
 
 kotlin {
@@ -26,12 +68,22 @@ kotlin {
     }
     
     sourceSets {
+        commonMain {
+            kotlin.srcDir(generateBankApiConfig.map { it.outputs.files.singleFile })
+        }
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation("io.insert-koin:koin-android:${libs.versions.koin.get()}")
+            implementation(libs.ktor.client.okhttp)
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
         }
         commonMain.dependencies {
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.contentNegotiation)
+            implementation(libs.ktor.serialization.json)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)

@@ -1,0 +1,4 @@
+node_modules/
+.wrangler/
+# Contém o link da planilha e o token: nunca vai para o repositório.
+.dev.vars
