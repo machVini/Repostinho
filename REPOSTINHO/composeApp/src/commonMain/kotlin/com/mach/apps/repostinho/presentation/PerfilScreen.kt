@@ -20,6 +20,8 @@ import com.mach.apps.repostinho.ui.positiveColor
 @Composable
 fun PerfilScreen(
     state: BankUiState,
+    /** Saldo da planilha, não recalculado aqui — mesmo número que a Home e a aba Saldos. */
+    myBalanceCents: Long?,
     tasks: List<ChoreTask>,
     modifier: Modifier = Modifier
 ) {
@@ -70,7 +72,7 @@ fun PerfilScreen(
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text("Na rep", fontWeight = FontWeight.Bold)
 
-                    state.currentBalanceCents?.let { balance ->
+                    myBalanceCents?.let { balance ->
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween

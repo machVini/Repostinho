@@ -5,6 +5,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 // Cores tiradas do brasão da rep: o azul do anel e da camisa, o amarelo das letras
@@ -112,10 +114,19 @@ private val DarkColors = darkColorScheme(
     onErrorContainer = Color(0xFFFFDAD6)
 )
 
+/**
+ * Qual dos dois esquemas está no ar.
+ *
+ * As funções abaixo liam `isSystemInDarkTheme()` direto, o que ignorava o parâmetro
+ * `darkTheme` do [RepostinhoTheme] — com o botão de modo noturno na toolbar, as cores
+ * precisam seguir a escolha do morador, não a do sistema.
+ */
+val LocalDarkTheme = staticCompositionLocalOf { false }
+
 /** Verde de saldo positivo. O Material 3 não tem um slot de "sucesso", então fica aqui. */
 @Composable
 fun positiveColor(): Color =
-    if (isSystemInDarkTheme()) Color(0xFF7DD87F) else Color(0xFF2E7D32)
+    if (LocalDarkTheme.current) Color(0xFF7DD87F) else Color(0xFF2E7D32)
 
 /*
  * Toolbar e menu inferior trocam de cor entre os temas: azul no claro, amarelo no escuro.
@@ -124,23 +135,23 @@ fun positiveColor(): Color =
 
 @Composable
 fun barContainerColor(): Color =
-    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondary
+    if (LocalDarkTheme.current) MaterialTheme.colorScheme.secondary
     else MaterialTheme.colorScheme.primary
 
 @Composable
 fun onBarColor(): Color =
-    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSecondary
+    if (LocalDarkTheme.current) MaterialTheme.colorScheme.onSecondary
     else MaterialTheme.colorScheme.onPrimary
 
 /** A pílula do item selecionado inverte junto, senão some dentro da barra. */
 @Composable
 fun barIndicatorColor(): Color =
-    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer
+    if (LocalDarkTheme.current) MaterialTheme.colorScheme.primaryContainer
     else MaterialTheme.colorScheme.secondaryContainer
 
 @Composable
 fun onBarIndicatorColor(): Color =
-    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer
+    if (LocalDarkTheme.current) MaterialTheme.colorScheme.onPrimaryContainer
     else MaterialTheme.colorScheme.onSecondaryContainer
 
 @Composable
@@ -148,8 +159,10 @@ fun RepostinhoTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
-        content = content
-    )
+    CompositionLocalProvider(LocalDarkTheme provides darkTheme) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkColors else LightColors,
+            content = content
+        )
+    }
 }
