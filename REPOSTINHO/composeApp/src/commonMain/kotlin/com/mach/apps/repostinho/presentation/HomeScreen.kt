@@ -21,6 +21,7 @@ import com.mach.apps.repostinho.ui.positiveColor
 @Composable
 fun HomeScreen(
     state: BankUiState,
+    sheet: SheetUiState,
     tasks: List<ChoreTask>,
     onGoToBanco: () -> Unit,
     onGoToTarefas: () -> Unit,
@@ -32,7 +33,7 @@ fun HomeScreen(
         item {
             Column(modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) {
                 Text(
-                    text = "Olá, ${state.currentResident?.name ?: ""}",
+                    text = "Olá, ${SheetUiState.CURRENT_MEMBER_NAME}",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -44,16 +45,16 @@ fun HomeScreen(
             }
         }
 
-        item { MyBalanceCard(state, onGoToBanco) }
+        item { MyBalanceCard(sheet, onGoToBanco) }
         item { MyTaskCard(myTask, tasks, onGoToTarefas) }
         item { MeetingNotesCard() }
-        item { RepSummaryCard(state) }
+        item { RepSummaryCard(sheet) }
     }
 }
 
 @Composable
-private fun MyBalanceCard(state: BankUiState, onGoToBanco: () -> Unit) {
-    val balance = state.currentBalanceCents ?: 0L
+private fun MyBalanceCard(sheet: SheetUiState, onGoToBanco: () -> Unit) {
+    val balance = sheet.myBalanceCents ?: 0L
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -143,15 +144,15 @@ private fun MeetingNotesCard() {
 }
 
 @Composable
-private fun RepSummaryCard(state: BankUiState) {
+private fun RepSummaryCard(sheet: SheetUiState) {
     Card(modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 16.dp)) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text("A rep", fontWeight = FontWeight.Bold)
 
-            SummaryLine("Moradores ativos", state.activeResidents.size.toString())
-            SummaryLine("Aluguel + contas", formatBrl(state.settings.monthlyFixedTotalCents))
-            SummaryLine("Total a receber", formatBrl(state.totalOwedCents))
-            SummaryLine("Lançamentos", state.transactionCount.toString())
+            SummaryLine("Moradores ativos", sheet.activeMembers.size.toString())
+            SummaryLine("Caixinha", formatBrl(sheet.caixinhaTotalCents ?: 0L))
+            SummaryLine("Total a receber", formatBrl(sheet.totalOwedCents))
+            SummaryLine("Lançamentos", sheet.movements.size.toString())
         }
     }
 }

@@ -47,6 +47,19 @@ fun parseBrlToCents(input: String): Long? {
     return (value * 100).roundToLong()
 }
 
+/**
+ * Peso de rateio: "1", "0,88", "14,24".
+ *
+ * Sai sem casas quando é inteiro, porque a maioria dos lançamentos usa peso 1 e "1,00"
+ * em toda linha vira ruído.
+ */
+fun formatWeight(weight: Double): String {
+    val rounded = (weight * 100).roundToLong()
+    if (rounded % 100L == 0L) return (rounded / 100L).toString()
+    val decimals = (rounded % 100L).toString().padStart(2, '0').trimEnd('0')
+    return "${rounded / 100L},$decimals"
+}
+
 /*
  * Nomes de mês escritos à mão porque não há `kotlinx-datetime` no projeto e o
  * `java.time` não existe no alvo iOS.

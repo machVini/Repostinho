@@ -30,6 +30,7 @@ import com.mach.apps.repostinho.presentation.CalendarioScreen
 import com.mach.apps.repostinho.presentation.DashboardViewModel
 import com.mach.apps.repostinho.presentation.HomeScreen
 import com.mach.apps.repostinho.presentation.PerfilScreen
+import com.mach.apps.repostinho.presentation.SheetUiState
 import com.mach.apps.repostinho.presentation.TarefasScreen
 import com.mach.apps.repostinho.ui.RepIcons
 import com.mach.apps.repostinho.ui.RepostinhoTheme
@@ -61,6 +62,7 @@ fun App() {
         KoinContext {
             val viewModel = koinInject<DashboardViewModel>()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+            val sheet by viewModel.sheet.collectAsStateWithLifecycle()
             val tasks by viewModel.tasks.collectAsStateWithLifecycle()
             val events by viewModel.events.collectAsStateWithLifecycle()
 
@@ -152,6 +154,7 @@ fun App() {
                     when (selectedTab) {
                         AppTab.HOME -> HomeScreen(
                             state = state,
+                            sheet = sheet,
                             tasks = tasks,
                             onGoToBanco = { navigateTo(AppTab.BANCO) },
                             onGoToTarefas = { navigateTo(AppTab.TAREFAS) },
@@ -159,13 +162,10 @@ fun App() {
                         )
 
                         AppTab.BANCO -> BancoScreen(
-                            state = state,
-                            onSaveExpense = viewModel::saveExpense,
-                            onRegisterPayment = { id, amount ->
-                                viewModel.savePayment(id, amount)
-                            },
-                            onSaveResident = viewModel::saveResident,
-                            onRemoveResident = viewModel::removeResident,
+                            balances = sheet.balances,
+                            movements = sheet.movements,
+                            caixinha = sheet.caixinha,
+                            currentMemberName = SheetUiState.CURRENT_MEMBER_NAME,
                             modifier = full
                         )
 
@@ -184,6 +184,7 @@ fun App() {
 
                         AppTab.PERFIL -> PerfilScreen(
                             state = state,
+                            myBalanceCents = sheet.myBalanceCents,
                             tasks = tasks,
                             modifier = inset
                         )
