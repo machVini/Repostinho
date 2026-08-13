@@ -89,6 +89,14 @@ object RepIcons {
         icon("ExpandLess", "M12,8l-6,6 1.41,1.41L12,10.83l4.59,4.58L18,14z")
     }
 
+    /** Lixeira: apaga um evento que a rep cadastrou. */
+    val Delete: ImageVector by lazy {
+        icon(
+            "Delete",
+            "M6,19c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V7H6v12zM19,4h-3.5l-1,-1h-5l-1,1H5v2h14V4z"
+        )
+    }
+
     /** Seta saindo da caixa: indica que o toque leva para fora do app. */
     val OpenExternal: ImageVector by lazy {
         icon(

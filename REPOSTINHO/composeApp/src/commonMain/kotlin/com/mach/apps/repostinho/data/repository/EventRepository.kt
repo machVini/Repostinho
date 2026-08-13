@@ -1,40 +1,227 @@
 package com.mach.apps.repostinho.data.repository
 
+import com.mach.apps.repostinho.data.local.EventsCache
+import com.mach.apps.repostinho.data.model.EventCategory
+import com.mach.apps.repostinho.data.model.Recurrence
 import com.mach.apps.repostinho.data.model.RepDate
 import com.mach.apps.repostinho.data.model.RepEvent
+import com.mach.apps.repostinho.data.remote.BankApi
+import com.mach.apps.repostinho.data.remote.BankApiConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 interface EventRepository {
     fun getEvents(): Flow<List<RepEvent>>
+
+    /** Os eventos cadastrados pela rep chegaram do servidor, e não só do cache. */
+    fun isShared(): Flow<Boolean>
+
+    /** Cadastra um evento para todos. Devolve false se a rede não deixou. */
+    suspend fun addEvent(event: RepEvent): Boolean
+
+    /** Apaga um evento da agenda de todos. Devolve false se a rede não deixou. */
+    suspend fun removeEvent(eventId: String): Boolean
+
+    suspend fun refresh()
 }
 
 /**
- * Agenda fixa da rep. Ainda não há cadastro de evento pela tela, então as datas ficam aqui,
- * na mesma ideia dos outros repositórios em memória.
+ * A agenda da rep: a parte fixa do app somada à que os moradores cadastram.
  *
- * O [YEAR] é fixo: quando virar o ano, as datas precisam ser atualizadas à mão.
+ * A divisão é de propósito. As datas fixas (aniversários, InterReps) valem mesmo
+ * na primeira abertura sem rede e não podem ser apagadas por um toque errado; o que é
+ * cadastrado pela tela mora no `banco-api` para aparecer no celular de todo mundo.
  */
-class InMemoryEventRepository : EventRepository {
+class RemoteEventRepository(
+    private val api: BankApi,
+    private val cache: EventsCache
+) : EventRepository {
 
-    private val events = MutableStateFlow(SEED)
+    private val custom = MutableStateFlow(cache.read().orEmpty())
+    private val events = MutableStateFlow(FIXED + custom.value)
+    private val shared = MutableStateFlow(false)
 
     override fun getEvents(): Flow<List<RepEvent>> = events.asStateFlow()
 
-    private companion object {
-        const val YEAR = 2026
+    override fun isShared(): Flow<Boolean> = shared.asStateFlow()
 
-        val SEED = listOf(
-            RepEvent("lei-do-retorno", "Lei do Retorno", RepDate(15, 8, YEAR)),
-            RepEvent("alcorridas", "Alcorridas", RepDate(29, 8, YEAR)),
-            RepEvent("arrecadaru", "ArrecadARU", RepDate(12, 9, YEAR)),
+    override suspend fun refresh() {
+        if (!BankApiConfig.isConfigured) return
+        try {
+            publish(api.fetchEvents().events, fromServer = true)
+        } catch (e: Exception) {
+            // A agenda fixa continua de pé — ela não vem da rede. Só o que a rep cadastrou
+            // é que fica com a última cópia conhecida.
+            shared.value = false
+        }
+    }
+
+    override suspend fun addEvent(event: RepEvent): Boolean = push {
+        api.addEvent(event.copy(isCustom = true)).events
+    }
+
+    override suspend fun removeEvent(eventId: String): Boolean = push {
+        api.removeEvent(eventId).events
+    }
+
+    /**
+     * Escrita sem eco otimista: a lista só muda quando o servidor confirma.
+     *
+     * Ao contrário da caixinha de tarefa feita, um evento que aparecesse na agenda e
+     * sumisse na sincronização seguinte faria alguém contar com uma data que a rep não
+     * tem. Aqui é melhor o botão falhar visivelmente do que a lista mentir.
+     */
+    private suspend fun push(block: suspend () -> List<RepEvent>): Boolean {
+        if (!BankApiConfig.isConfigured) return false
+        return try {
+            publish(block(), fromServer = true)
+            true
+        } catch (e: Exception) {
+            shared.value = false
+            false
+        }
+    }
+
+    private fun publish(remote: List<RepEvent>, fromServer: Boolean) {
+        custom.value = remote
+        events.value = FIXED + remote
+        shared.value = fromServer
+        cache.write(remote)
+    }
+
+    companion object {
+        /**
+         * A agenda que o app já traz.
+         *
+         * Recorrentes não têm ano de validade: o ano em [RepDate] é só o da primeira
+         * ocorrência. Era isso que obrigava a atualizar as datas à mão na virada do ano.
+         */
+        val FIXED = listOf(
+            RepEvent(
+                id = "niver-rep",
+                name = "Aniversário da Rep",
+                start = RepDate(3, 8, 2023),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL,
+                isHighlight = true
+            ),
+            RepEvent(
+                id = "niver-vk",
+                name = "Aniversário do VK",
+                start = RepDate(20, 2, 2001),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL
+            ),
+            RepEvent(
+                id = "lei-do-retorno",
+                name = "Lei do Retorno",
+                start = RepDate(15, 8, 2026),
+                category = EventCategory.ROLE
+            ),
+            RepEvent(
+                id = "alcorridas",
+                name = "Alcorridas",
+                start = RepDate(29, 8, 2026),
+                category = EventCategory.ARU
+            ),
+            RepEvent(
+                id = "arrecadaru",
+                name = "ArrecadARU",
+                start = RepDate(12, 9, 2026),
+                category = EventCategory.ARU
+            ),
             RepEvent(
                 id = "interreps",
                 name = "InterReps",
-                start = RepDate(19, 11, YEAR),
-                end = RepDate(22, 11, YEAR)
-            )
+                start = RepDate(19, 11, 2026),
+                end = RepDate(22, 11, 2026),
+                category = EventCategory.ARU
+            ),
+            RepEvent(
+                id = "niver-leozy",
+                name = "Aniversário do Leozy",
+                start = RepDate(11, 1, 2003),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL
+            ),
+            RepEvent(
+                id = "niver-gab",
+                name = "Aniversário do Gab",
+                start = RepDate(11, 1, 2001),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL
+            ),
+            RepEvent(
+                id = "niver-peter",
+                name = "Aniversário do Peter",
+                start = RepDate(24, 2, 2003),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL
+            ),
+            RepEvent(
+                id = "niver-prazer",
+                name = "Aniversário do Prazer",
+                start = RepDate(6, 3, 2008),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL
+            ),
+            RepEvent(
+                id = "niver-tz",
+                name = "Aniversário do TZ",
+                start = RepDate(2, 8, 2008),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL
+            ),
+            RepEvent(
+                id = "niver-cansado",
+                name = "Aniversário do Cansado",
+                start = RepDate(31, 8, 2002),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL
+            ),
+            RepEvent(
+                id = "niver-mn",
+                name = "Aniversário do Mais Novo",
+                start = RepDate(17, 9, 2006),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL
+            ),
+            RepEvent(
+                id = "niver-gu",
+                name = "Aniversário do Gu",
+                start = RepDate(22, 10, 2003),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL
+            ),
+            RepEvent(
+                id = "niver-pico",
+                name = "Aniversário do Pico",
+                start = RepDate(28, 10, 2000),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL
+            ),
+            RepEvent(
+                id = "niver-mixas",
+                name = "Aniversário do Mixas",
+                start = RepDate(10, 11, 2007),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL
+            ),
+            RepEvent(
+                id = "niver-lameu",
+                name = "Aniversário do Lameu",
+                start = RepDate(20, 11, 2003),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL
+            ),
+            RepEvent(
+                id = "niver-ll",
+                name = "Aniversário do LL",
+                start = RepDate(29, 12, 1999),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL
+            ),
         )
     }
 }

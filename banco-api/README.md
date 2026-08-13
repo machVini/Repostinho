@@ -97,6 +97,37 @@ remarcar; resolver de verdade exigiria um Durable Object.
 Estas respostas não são cacheadas (`no-store`): marcação é estado vivo, e a borda mostraria
 a caixa desmarcada logo depois do toque.
 
+`GET /eventos` e `POST /eventos`, mesmo header, guardam a agenda que a rep cadastra pelo
+app:
+
+```json
+{ "events": [ { "id": "custom-churrasco-2410", "name": "Churrasco",
+                "start": { "day": 24, "month": 10, "year": 2026 },
+                "end":   { "day": 24, "month": 10, "year": 2026 },
+                "category": "ROLE", "recurrence": "NENHUMA",
+                "isHighlight": false, "isCustom": true } ] }
+```
+
+O `POST` recebe `{ "event": {...} }` para criar e `{ "remove": "<id>" }` para apagar, e nos
+dois casos devolve a agenda inteira já atualizada. Mesmo `id` sobrescreve: reenviar depois
+de um timeout corrige em vez de duplicar.
+
+**Só a agenda cadastrada pela tela mora aqui.** A agenda fixa — aniversários, InterReps e o
+resto do calendário da ARU — vem embutida no app: ela precisa valer na primeira abertura sem
+rede, e não faz sentido alguém poder apagá-la de um toque. O app junta as duas listas. Por
+isso `isCustom` é forçado a `true` na entrada: um cliente não pode se declarar fixo para
+virar inapagável.
+
+Campos fora do esperado são recusados com 400 em vez de gravados. Um evento torto no KV
+viraria exceção de desserialização no Kotlin e a agenda não abriria para ninguém — melhor
+recusar na entrada do que derrubar a tela de todo mundo. Categoria e recorrência
+desconhecidas são exceção: viram `ROLE` e `NENHUMA`, para uma versão nova do app poder
+mandar valores que a atual ainda não conhece.
+
+Não tem TTL, ao contrário das tarefas: um evento vale até alguém apagar. Usa o mesmo
+namespace KV das tarefas, em outra chave — são duas listas pequenas do mesmo app, e um
+namespace por chave só multiplicaria configuração.
+
 ### A pasta precisa estar aberta por link
 
 Uma chave de API do Google só enxerga o que está compartilhado como "qualquer pessoa com

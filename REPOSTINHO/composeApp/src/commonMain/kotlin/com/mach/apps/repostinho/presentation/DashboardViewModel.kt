@@ -4,9 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mach.apps.repostinho.data.model.CaixinhaLine
 import com.mach.apps.repostinho.data.model.ChoreTask
+import com.mach.apps.repostinho.data.model.EventOccurrence
+import com.mach.apps.repostinho.data.model.EventSchedule
 import com.mach.apps.repostinho.data.model.MeetingNotes
 import com.mach.apps.repostinho.data.model.MemberBalance
 import com.mach.apps.repostinho.data.model.Movement
+import com.mach.apps.repostinho.data.model.RepDate
 import com.mach.apps.repostinho.data.model.RepEvent
 import com.mach.apps.repostinho.data.model.Resident
 import com.mach.apps.repostinho.data.repository.BankSheetRepository
@@ -15,6 +18,7 @@ import com.mach.apps.repostinho.data.repository.EventRepository
 import com.mach.apps.repostinho.data.repository.InMemoryResidentRepository
 import com.mach.apps.repostinho.data.repository.MeetingNotesRepository
 import com.mach.apps.repostinho.data.repository.ResidentRepository
+import com.mach.apps.repostinho.data.repository.RotatingChoreRepository
 import com.mach.apps.repostinho.data.repository.RotationStatus
 import com.mach.apps.repostinho.data.repository.SyncState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,8 +26,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
+import kotlinx.datetime.todayIn
 
 data class BankUiState(
     val residents: List<Resident> = emptyList(),
@@ -67,6 +75,7 @@ data class SheetUiState(
     }
 }
 
+@OptIn(ExperimentalTime::class)
 class DashboardViewModel(
     private val residentRepository: ResidentRepository,
     private val choreRepository: ChoreRepository,
@@ -115,9 +124,24 @@ class DashboardViewModel(
             RotationStatus(week = 0, rangeLabel = "", isPaused = false)
         )
 
-    val events: StateFlow<List<RepEvent>> = eventRepository.getEvents()
+    /**
+     * A agenda de hoje até 31 de dezembro, já com os recorrentes abertos em datas.
+     *
+     * Um aniversário é um cadastro só e vira a data deste ano; um evento que passou some
+     * sozinho. Por isso a lista sai daqui pronta, em vez de a tela receber os eventos e
+     * ter que expandi-los.
+     */
+    val events: StateFlow<List<EventOccurrence>> = eventRepository.getEvents()
+        .map { EventSchedule.occurrencesUntilEndOfYear(it, today()) }
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val eventsShared: StateFlow<Boolean> = eventRepository.isShared()
+        .catch { emit(false) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /** O ano da janela da agenda: é nele que um evento cadastrado pela tela entra. */
+    val currentYear: Int get() = today().year
 
     val meetingNotes: StateFlow<MeetingNotes> = meetingNotesRepository.getNotes()
         .catch { emit(MeetingNotes()) }
@@ -127,6 +151,22 @@ class DashboardViewModel(
         // Uma busca por abertura do app; durante a sessão, quem decide é o morador,
         // puxando a lista para baixo.
         refreshSheet()
+    }
+
+    /** Hoje no fuso da rep, como data de calendário. */
+    private fun today(): RepDate {
+        val date = Clock.System.todayIn(RotatingChoreRepository.CAMPINAS)
+        return RepDate(day = date.day, month = date.month.ordinal + 1, year = date.year)
+    }
+
+    /** Cadastra um evento para a rep inteira. */
+    fun addEvent(event: RepEvent) {
+        viewModelScope.launch { eventRepository.addEvent(event) }
+    }
+
+    /** Tira um evento da agenda de todos. Só vale para os cadastrados pela tela. */
+    fun removeEvent(eventId: String) {
+        viewModelScope.launch { eventRepository.removeEvent(eventId) }
     }
 
     /**
@@ -140,6 +180,8 @@ class DashboardViewModel(
         // As atas vêm no mesmo gesto: são duas listas da mesma tela, e ninguém espera
         // puxar duas vezes.
         viewModelScope.launch { meetingNotesRepository.refresh(fresh) }
+        // A agenda cadastrada pela rep vem no mesmo gesto.
+        viewModelScope.launch { eventRepository.refresh() }
         // A escala não vem da rede, mas depende da data: sem recalcular aqui, um app
         // deixado aberto atravessa a quarta-feira mostrando a semana anterior.
         viewModelScope.launch { choreRepository.refresh() }

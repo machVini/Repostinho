@@ -76,6 +76,7 @@ fun App() {
             val events by viewModel.events.collectAsStateWithLifecycle()
             val notes by viewModel.meetingNotes.collectAsStateWithLifecycle()
             val rotation by viewModel.rotation.collectAsStateWithLifecycle()
+            val eventsShared by viewModel.eventsShared.collectAsStateWithLifecycle()
 
             var selectedTab by remember { mutableStateOf(AppTab.HOME) }
 
@@ -220,7 +221,11 @@ fun App() {
                         )
 
                         AppTab.CALENDARIO -> CalendarioScreen(
-                            events = events,
+                            occurrences = events,
+                            isShared = eventsShared,
+                            year = viewModel.currentYear,
+                            onAddEvent = viewModel::addEvent,
+                            onRemoveEvent = viewModel::removeEvent,
                             modifier = inset
                         )
 

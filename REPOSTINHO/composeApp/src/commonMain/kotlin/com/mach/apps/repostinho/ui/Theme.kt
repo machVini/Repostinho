@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import com.mach.apps.repostinho.data.model.EventCategory
 
 // Cores tiradas do brasão da rep: o azul do anel e da camisa, o amarelo das letras
 // e o dourado do fundo.
@@ -175,6 +176,37 @@ fun accentColor(): Color =
 
 @Composable
 fun onBarIndicatorColor(): Color = MaterialTheme.colorScheme.onSecondaryContainer
+
+/*
+ * Cores das categorias da agenda.
+ *
+ * São dois tons por categoria porque os cards mudam de fundo com o tema: no claro eles são
+ * creme, e a cor precisa ser escura e saturada; no escuro são azuis, e a mesma cor escura
+ * sumiria. Nenhuma delas é o ouro nem o azul do app — esses dois já têm significado
+ * ("é seu" e "estrutura"), e reaproveitá-los para categoria embaralharia a leitura.
+ */
+private val EventPink = Color(0xFFB3236B) to Color(0xFFFFA8CE)
+private val EventAmber = Color(0xFF9A5B00) to Color(0xFFFFC078)
+private val EventGreen = Color(0xFF2E7D32) to Color(0xFF7DD87F)
+private val EventViolet = Color(0xFF6A3FB5) to Color(0xFFCBB2FF)
+
+/**
+ * A cor de uma categoria da agenda no tema atual.
+ *
+ * O aniversário da rep não usa isto: ele se destaca pelo card inteiro pintado, e não pela
+ * cor do texto. Ouro sobre o creme do tema claro seria ilegível, que é a mesma razão de
+ * [accentColor] virar azul no claro.
+ */
+@Composable
+fun eventCategoryColor(category: EventCategory): Color {
+    val (light, dark) = when (category) {
+        EventCategory.ANIVERSARIO -> EventPink
+        EventCategory.REP -> EventAmber
+        EventCategory.ROLE -> EventGreen
+        EventCategory.ARU -> EventViolet
+    }
+    return if (LocalDarkTheme.current) dark else light
+}
 
 @Composable
 fun RepostinhoTheme(
