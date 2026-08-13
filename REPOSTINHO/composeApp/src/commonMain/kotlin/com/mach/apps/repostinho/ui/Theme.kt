@@ -187,7 +187,6 @@ fun onBarIndicatorColor(): Color = MaterialTheme.colorScheme.onSecondaryContaine
  */
 private val EventPink = Color(0xFFB3236B) to Color(0xFFFFA8CE)
 private val EventGreen = Color(0xFF2E7D32) to Color(0xFF7DD87F)
-private val EventAmber = Color(0xFF9A5B00) to Color(0xFFFFC078)
 private val EventViolet = Color(0xFF6A3FB5) to Color(0xFFCBB2FF)
 
 /**
@@ -202,7 +201,6 @@ fun eventCategoryColor(category: EventCategory): Color {
     val (light, dark) = when (category) {
         EventCategory.ANIVERSARIO -> EventPink
         EventCategory.ROLE -> EventGreen
-        EventCategory.CONTA -> EventAmber
         EventCategory.ARU -> EventViolet
     }
     return if (LocalDarkTheme.current) dark else light

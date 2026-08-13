@@ -78,8 +78,8 @@ fun monthAbbrev(month: Int): String = monthName(month).take(3).uppercase()
  * "15 de agosto" para um dia só, "19 a 22 de novembro" quando o evento se estende dentro
  * do mesmo mês, e "30 de novembro a 2 de dezembro" quando atravessa a virada.
  *
- * Recebe a ocorrência, e não o evento: o aluguel é um cadastro só, mas cada mês tem a sua
- * data, e é a data da vez que a linha precisa mostrar.
+ * Recebe a ocorrência, e não o evento: um recorrente é um cadastro só, mas cada volta tem
+ * a sua data, e é a data da vez que a linha precisa mostrar.
  */
 fun formatOccurrencePeriod(occurrence: EventOccurrence): String = when {
     !occurrence.isMultiDay ->

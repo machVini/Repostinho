@@ -12,11 +12,14 @@ import kotlin.test.assertTrue
 /** 13 de agosto de 2026 — o "hoje" de referência dos testes. */
 private val HOJE = RepDate(13, 8, 2026)
 
-private val ALUGUEL = RepEvent(
-    id = "aluguel",
-    name = "Aluguel",
+/**
+ * Nenhum evento da agenda usa recorrência mensal hoje, mas o `banco-api` aceita `MENSAL` e
+ * a expansão precisa continuar correta para quem cadastrar um por lá.
+ */
+private val MENSAL_DIA_18 = RepEvent(
+    id = "mensal",
+    name = "Evento mensal",
     start = RepDate(18, 1, 2026),
-    category = EventCategory.CONTA,
     recurrence = Recurrence.MENSAL
 )
 
@@ -42,7 +45,7 @@ private fun datesOf(vararg events: RepEvent, today: RepDate = HOJE): List<RepDat
 class EventScheduleTest {
 
     @Test
-    fun oAluguelAbreUmaLinhaPorMesQueFalta() {
+    fun umEventoMensalAbreUmaLinhaPorMesQueFalta() {
         // De 13/08 até o fim do ano sobram cinco dias 18.
         assertEquals(
             listOf(
@@ -52,7 +55,7 @@ class EventScheduleTest {
                 RepDate(18, 11, 2026),
                 RepDate(18, 12, 2026)
             ),
-            datesOf(ALUGUEL)
+            datesOf(MENSAL_DIA_18)
         )
     }
 
@@ -91,7 +94,7 @@ class EventScheduleTest {
 
     @Test
     fun aListaSaiEmOrdemDeData() {
-        val ordered = datesOf(INTERREPS, ALUGUEL, NIVER_REP)
+        val ordered = datesOf(INTERREPS, MENSAL_DIA_18, NIVER_REP)
         assertEquals(ordered.sortedWith(compareBy { it }), ordered)
     }
 

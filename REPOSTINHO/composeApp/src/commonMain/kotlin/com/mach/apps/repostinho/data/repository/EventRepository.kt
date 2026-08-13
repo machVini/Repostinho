@@ -29,7 +29,7 @@ interface EventRepository {
 /**
  * A agenda da rep: a parte fixa do app somada à que os moradores cadastram.
  *
- * A divisão é de propósito. As datas fixas (aluguel, aniversários, InterReps) valem mesmo
+ * A divisão é de propósito. As datas fixas (aniversários, InterReps) valem mesmo
  * na primeira abertura sem rede e não podem ser apagadas por um toque errado; o que é
  * cadastrado pela tela mora no `banco-api` para aparecer no celular de todo mundo.
  */
@@ -112,13 +112,6 @@ class RemoteEventRepository(
                 start = RepDate(20, 2, 2001),
                 category = EventCategory.ANIVERSARIO,
                 recurrence = Recurrence.ANUAL
-            ),
-            RepEvent(
-                id = "aluguel",
-                name = "Aluguel",
-                start = RepDate(18, 1, 2026),
-                category = EventCategory.CONTA,
-                recurrence = Recurrence.MENSAL
             ),
             RepEvent(
                 id = "lei-do-retorno",

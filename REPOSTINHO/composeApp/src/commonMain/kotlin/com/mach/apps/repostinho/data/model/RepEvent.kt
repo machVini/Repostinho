@@ -19,14 +19,13 @@ data class RepDate(val day: Int, val month: Int, val year: Int) : Comparable<Rep
 /**
  * A que parte da vida da rep o evento pertence.
  *
- * É o que dá cor ao card: sem categoria, uma agenda com aluguel, aniversário e festa no
- * mesmo tom obriga a ler o nome de cada linha para saber do que se trata.
+ * É o que dá cor ao card: sem categoria, uma agenda com aniversário, festa e evento da
+ * ARU no mesmo tom obriga a ler o nome de cada linha para saber do que se trata.
  */
 @Serializable
 enum class EventCategory(val label: String) {
     ANIVERSARIO("Aniversários"),
     ROLE("Rolês"),
-    CONTA("Vencimento de contas"),
     ARU("ARU")
 }
 
@@ -36,7 +35,7 @@ enum class Recurrence {
     /** Data única: acontece uma vez e sai da agenda. */
     NENHUMA,
 
-    /** Todo mês no mesmo dia — o aluguel. */
+    /** Todo mês no mesmo dia. Nenhum evento fixo usa hoje, mas o `banco-api` aceita. */
     MENSAL,
 
     /** Todo ano no mesmo dia e mês — aniversários. */
@@ -78,8 +77,8 @@ data class RepEvent(
 /**
  * Uma ocorrência de um evento numa data concreta.
  *
- * O aluguel é um evento só, mas aparece cinco vezes entre agosto e dezembro. Quem vai
- * para a tela é isto, não o [RepEvent].
+ * Um evento mensal é um cadastro só, mas aparece uma vez por mês na janela da agenda.
+ * Quem vai para a tela é isto, não o [RepEvent].
  */
 data class EventOccurrence(
     val event: RepEvent,

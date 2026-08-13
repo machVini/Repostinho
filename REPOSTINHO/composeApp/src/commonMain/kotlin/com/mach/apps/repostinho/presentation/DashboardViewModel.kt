@@ -127,9 +127,9 @@ class DashboardViewModel(
     /**
      * A agenda de hoje até 31 de dezembro, já com os recorrentes abertos em datas.
      *
-     * O aluguel é um cadastro só e vira uma linha por mês que ainda falta; um evento que
-     * passou some sozinho. Por isso a lista sai daqui pronta, em vez de a tela receber os
-     * eventos e ter que expandi-los.
+     * Um aniversário é um cadastro só e vira a data deste ano; um evento que passou some
+     * sozinho. Por isso a lista sai daqui pronta, em vez de a tela receber os eventos e
+     * ter que expandi-los.
      */
     val events: StateFlow<List<EventOccurrence>> = eventRepository.getEvents()
         .map { EventSchedule.occurrencesUntilEndOfYear(it, today()) }

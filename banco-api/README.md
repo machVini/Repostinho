@@ -112,10 +112,11 @@ O `POST` recebe `{ "event": {...} }` para criar e `{ "remove": "<id>" }` para ap
 dois casos devolve a agenda inteira já atualizada. Mesmo `id` sobrescreve: reenviar depois
 de um timeout corrige em vez de duplicar.
 
-**Só a agenda cadastrada pela tela mora aqui.** A agenda fixa — aluguel, aniversários,
-InterReps — vem embutida no app: ela precisa valer na primeira abertura sem rede, e não faz
-sentido alguém poder apagá-la de um toque. O app junta as duas listas. Por isso `isCustom`
-é forçado a `true` na entrada: um cliente não pode se declarar fixo para virar inapagável.
+**Só a agenda cadastrada pela tela mora aqui.** A agenda fixa — aniversários, InterReps e o
+resto do calendário da ARU — vem embutida no app: ela precisa valer na primeira abertura sem
+rede, e não faz sentido alguém poder apagá-la de um toque. O app junta as duas listas. Por
+isso `isCustom` é forçado a `true` na entrada: um cliente não pode se declarar fixo para
+virar inapagável.
 
 Campos fora do esperado são recusados com 400 em vez de gravados. Um evento torto no KV
 viraria exceção de desserialização no Kotlin e a agenda não abriria para ninguém — melhor

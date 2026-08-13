@@ -156,7 +156,7 @@ private fun EventCard(
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         // O aniversário da rep se destaca pelo card inteiro, e não por mais uma cor de
-        // texto: numa lista onde cada categoria já tem a sua, uma sexta cor sumiria no
+        // texto: numa lista onde cada categoria já tem a sua, mais uma cor sumiria no
         // meio. Pintado, ele é o único que muda de forma.
         colors = if (event.isHighlight) {
             CardDefaults.cardColors(
@@ -213,7 +213,7 @@ private fun EventCard(
             }
 
             // Só o que a rep cadastrou pode ser apagado — as datas fixas do app não têm
-            // botão, para ninguém tirar o aluguel da agenda sem querer.
+            // botão, para ninguém tirar o InterReps da agenda sem querer.
             if (event.isCustom) {
                 IconButton(onClick = onRemove) {
                     Icon(
@@ -263,7 +263,7 @@ private fun CategoryLegend(modifier: Modifier = Modifier) {
             CategoryTag(category = category, modifier = Modifier.padding(top = 6.dp))
         }
         Text(
-            text = "A agenda fixa (aluguel, aniversários, ARU) vem no app. O que for " +
+            text = "A agenda fixa (aniversários e ARU) vem no app. O que for " +
                 "adicionado aqui aparece para a rep inteira.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -335,8 +335,7 @@ private fun AddEventDialog(
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.padding(top = 12.dp)
                 )
-                // Uma linha por categoria: os nomes são longos e, lado a lado, "Vencimento
-                // de contas" quebraria no meio.
+                // Uma linha por categoria: lado a lado, os nomes quebrariam no meio.
                 EventCategory.entries.forEach { option ->
                     FilterChip(
                         selected = option == category,

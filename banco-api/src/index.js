@@ -54,7 +54,7 @@ const TAREFAS_TTL_SECONDS = 60 * 24 * 60 * 60;
 const EVENTOS_KEY = "eventos:v1";
 
 /** O que o app sabe desenhar. Categoria desconhecida vira ROLE em vez de derrubar a tela. */
-const EVENT_CATEGORIES = ["ANIVERSARIO", "ROLE", "CONTA", "ARU"];
+const EVENT_CATEGORIES = ["ANIVERSARIO", "ROLE", "ARU"];
 const RECURRENCES = ["NENHUMA", "MENSAL", "ANUAL"];
 
 /** Nomes das abas na planilha. Mudou lá, muda aqui. */
