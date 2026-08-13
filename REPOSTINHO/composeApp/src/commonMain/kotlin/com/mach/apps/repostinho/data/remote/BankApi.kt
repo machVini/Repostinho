@@ -39,7 +39,17 @@ data class BankSheetPayload(
     val generatedAtLabel: String = "",
     val balances: List<MemberBalance>,
     val movements: List<Movement>,
-    val caixinha: List<CaixinhaLine>
+    val caixinha: List<CaixinhaLine>,
+    /**
+     * Quem pode entrar num rateio, na ordem das colunas da planilha.
+     *
+     * Vem do cabeçalho da aba `Movimentações`, e não de uma lista no app: os nomes já
+     * existem na planilha e no formulário de lançamento, e uma terceira cópia aqui seria a
+     * primeira a ficar velha quando alguém entrasse ou saísse da rep.
+     *
+     * Tem default porque cache gravado antes deste campo existir precisa continuar legível.
+     */
+    val participants: List<String> = emptyList()
 )
 
 /**
