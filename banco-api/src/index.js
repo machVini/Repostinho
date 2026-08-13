@@ -28,6 +28,22 @@ const ATAS_SCAN = 50;
  */
 const ATAS_CACHE_SECONDS = CACHE_SECONDS;
 
+/**
+ * Prefixo das chaves das tarefas feitas no KV.
+ *
+ * A semana entra na chave, então a virada de quarta-feira zera as marcações sozinha: a
+ * semana seguinte é outra chave, que ainda não existe. Nada precisa ser apagado.
+ */
+const TAREFAS_PREFIX = "feitas:v1";
+
+/**
+ * Por quanto tempo uma semana de marcações sobrevive no KV.
+ *
+ * Passada a semana, elas não têm mais leitor. Sessenta dias dão folga para o rodízio ser
+ * pausado e retomado sem perder o que já estava marcado.
+ */
+const TAREFAS_TTL_SECONDS = 60 * 24 * 60 * 60;
+
 /** Nomes das abas na planilha. Mudou lá, muda aqui. */
 const SHEET_BALANCES = "Saldos_pessoas";
 const SHEET_MOVEMENTS = "Movimentações";
@@ -304,6 +320,82 @@ async function handleAtas(request, env, ctx) {
 }
 
 /**
+ * As tarefas marcadas como feitas na semana, compartilhadas entre os moradores.
+ *
+ * Quem calcula a semana é o app, não o Worker: a regra do rodízio (quando vira, se está
+ * pausado) mora no Kotlin, e duplicá-la aqui criaria duas versões da mesma conta para
+ * discordarem. O custo é que um aparelho com a data errada marca na semana errada.
+ *
+ * Só isto é compartilhado por enquanto — a escala em si continua fixa no app.
+ */
+async function handleTarefas(request, env) {
+  if (!env.TAREFAS) {
+    return json({ error: "KV TAREFAS não configurado" }, 500);
+  }
+
+  const url = new URL(request.url);
+
+  if (request.method === "GET") {
+    const week = weekParam(url.searchParams.get("semana"));
+    if (week === null) return json({ error: "semana inválida" }, 400);
+    return tarefasResponse(env, week, await readDone(env, week));
+  }
+
+  if (request.method !== "POST") {
+    return json({ error: "method not allowed" }, 405);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "corpo não é JSON" }, 400);
+  }
+
+  const week = weekParam(body?.week);
+  const choreId = typeof body?.choreId === "string" ? body.choreId.trim() : "";
+  if (week === null || !choreId) {
+    return json({ error: "week e choreId são obrigatórios" }, 400);
+  }
+
+  // Ler-alterar-gravar: o KV não tem operação atômica, então duas pessoas marcando no
+  // mesmo segundo podem perder uma das marcas. Numa rep de 15 pessoas o desencontro é
+  // raro e o conserto é remarcar; resolver de verdade exigiria um Durable Object.
+  const current = new Set(await readDone(env, week));
+  if (body.done === false) current.delete(choreId);
+  else current.add(choreId);
+
+  const updated = [...current].sort();
+  await env.TAREFAS.put(`${TAREFAS_PREFIX}:${week}`, JSON.stringify(updated), {
+    expirationTtl: TAREFAS_TTL_SECONDS,
+  });
+
+  return tarefasResponse(env, week, updated);
+}
+
+async function readDone(env, week) {
+  const raw = await env.TAREFAS.get(`${TAREFAS_PREFIX}:${week}`, { type: "json" });
+  return Array.isArray(raw) ? raw.filter((id) => typeof id === "string") : [];
+}
+
+/** Marcação é estado vivo: cachear na borda mostraria a caixa desmarcada depois do toque. */
+function tarefasResponse(env, week, doneChoreIds) {
+  return json({ week, doneChoreIds }, 200, { "cache-control": "no-store" });
+}
+
+/**
+ * A semana é inteira e pode ser negativa — âncora à frente, aparelho com data atrasada.
+ *
+ * Ausente é erro, e não zero: `Number(null)` é 0, então sem esta guarda um app que
+ * esquecesse o parâmetro leria e gravaria na semana da âncora sem reclamar de nada.
+ */
+function weekParam(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const week = Number(value);
+  return Number.isInteger(week) ? week : null;
+}
+
+/**
  * Chave de cache que muda quando a resposta deveria mudar.
  *
  * `wrangler deploy` não limpa o cache de borda: uma entrada gravada antes continua sendo
@@ -351,6 +443,7 @@ export default {
     }
 
     if (url.pathname === "/atas") return handleAtas(request, env, ctx);
+    if (url.pathname === "/tarefas") return handleTarefas(request, env);
     if (url.pathname !== "/banco") {
       return json({ error: "not found" }, 404);
     }

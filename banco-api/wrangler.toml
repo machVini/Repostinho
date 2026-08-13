@@ -6,3 +6,9 @@ compatibility_date = "2026-08-11"
 # Configure com:
 #   wrangler secret put SHEET_URL
 #   wrangler secret put API_TOKEN
+
+# As tarefas marcadas como feitas na semana. É o único estado que o Worker grava — o
+# resto ele só lê e converte. O id não é secret: sem o API_TOKEN ele não abre nada.
+[[kv_namespaces]]
+binding = "TAREFAS"
+id = "9e852c0d78af4bcd8e82868e7b60ff46"
