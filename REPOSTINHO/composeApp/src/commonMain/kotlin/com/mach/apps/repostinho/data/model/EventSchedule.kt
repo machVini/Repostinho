@@ -25,9 +25,18 @@ object EventSchedule {
         val lastDay = RepDate(31, 12, today.year)
 
         return events
+            // Uma data impossível — mês 22, de um dedo escorregado no cadastro fixo — não
+            // pode levar a agenda junto. O `catch` do ViewModel transformaria a exceção
+            // numa lista vazia, e a tela ficaria em branco sem dizer por quê; melhor
+            // perder o evento torto e mostrar os outros treze.
+            .filter { it.start.isReal() && it.end.isReal() }
             .flatMap { occurrencesOf(it, today, lastDay) }
             .sortedWith(compareBy({ it.start }, { it.event.name }))
     }
+
+    /** Existe no calendário: mês de 1 a 12 e dia dentro do que aquele mês tem. */
+    private fun RepDate.isReal(): Boolean =
+        month in 1..12 && day in 1..daysInMonth(month, year)
 
     private fun occurrencesOf(
         event: RepEvent,

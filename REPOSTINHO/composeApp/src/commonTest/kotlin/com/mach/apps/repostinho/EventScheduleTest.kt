@@ -138,6 +138,33 @@ class EventScheduleTest {
     }
 
     @Test
+    fun umaDataImpossivelNaoLevaAAgendaJunto() {
+        // Mês 22 já aconteceu num cadastro fixo. Antes disso estourava
+        // ArrayIndexOutOfBounds, e o `catch` do ViewModel virava tela em branco: a agenda
+        // inteira sumia por causa de um evento.
+        val torto = RepEvent(
+            id = "torto",
+            name = "Data impossível",
+            start = RepDate(29, 22, 1999),
+            recurrence = Recurrence.ANUAL
+        )
+        val bom = RepEvent("bom", "Evento bom", RepDate(10, 10, 2026))
+
+        assertEquals(listOf(RepDate(10, 10, 2026)), datesOf(torto, bom))
+    }
+
+    @Test
+    fun diaQueNaoExisteNoMesTambemEhDescartado() {
+        val trintaDeFevereiro = RepEvent(
+            id = "torto",
+            name = "30 de fevereiro",
+            start = RepDate(30, 2, 2026),
+            recurrence = Recurrence.ANUAL
+        )
+        assertTrue(datesOf(trintaDeFevereiro, today = RepDate(1, 1, 2026)).isEmpty())
+    }
+
+    @Test
     fun fevereiroDeAnoBissextoTemVinteENove() {
         val niver = RepEvent(
             id = "bissexto",
