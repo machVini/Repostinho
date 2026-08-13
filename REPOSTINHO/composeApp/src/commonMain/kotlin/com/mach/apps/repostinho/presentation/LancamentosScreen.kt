@@ -1,7 +1,9 @@
 package com.mach.apps.repostinho.presentation
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,7 +12,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,14 +39,26 @@ import com.mach.apps.repostinho.ui.RepIcons
 import com.mach.apps.repostinho.ui.accentColor
 import com.mach.apps.repostinho.ui.positiveColor
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LancamentosScreen(
     movements: List<Movement>,
+    residentNames: List<String>,
     currentMemberName: String,
     modifier: Modifier = Modifier
 ) {
+    // null = sem filtro. É o único estado que não corresponde a um morador de verdade,
+    // então não pode ser um nome vazio — colidiria se algum dia existisse um assim.
+    var filterName by remember { mutableStateOf<String?>(null) }
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    val filtered = remember(movements, filterName) {
+        filterName?.let { name -> movements.filter { it.involves(name) } } ?: movements
+    }
     // Mais recente primeiro: na planilha os lançamentos são acrescentados no fim.
-    val ordered = movements.asReversed()
+    val ordered = filtered.asReversed()
+
+    val otherNames = residentNames.filter { it != currentMemberName }
 
     LazyColumn(modifier = modifier.fillMaxWidth()) {
         item {
@@ -50,9 +69,74 @@ fun LancamentosScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${movements.size} lançamentos no banco atual.",
+                    text = filterSubtitle(filtered.size, filterName, currentMemberName),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Row(
+                    modifier = Modifier
+                        .padding(top = 12.dp)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = filterName == null,
+                        onClick = { filterName = null },
+                        label = { Text("Todos") }
+                    )
+                    FilterChip(
+                        selected = filterName == currentMemberName,
+                        onClick = { filterName = currentMemberName },
+                        label = { Text("Minhas") }
+                    )
+
+                    // Só aparece se houver outro morador para filtrar: sem a planilha
+                    // carregada, a lista fica vazia e o chip não teria o que abrir.
+                    if (otherNames.isNotEmpty()) {
+                        Box {
+                            val isOther = filterName != null && filterName != currentMemberName
+                            FilterChip(
+                                selected = isOther,
+                                onClick = { menuExpanded = true },
+                                label = { Text(if (isOther) filterName!! else "Morador…") },
+                                trailingIcon = {
+                                    Icon(
+                                        imageVector = RepIcons.ExpandMore,
+                                        contentDescription = "Escolher morador"
+                                    )
+                                }
+                            )
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false }
+                            ) {
+                                otherNames.forEach { name ->
+                                    DropdownMenuItem(
+                                        text = { Text(name) },
+                                        onClick = {
+                                            filterName = name
+                                            menuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Só com filtro: sem ele, lista vazia é planilha não carregada, e quem explica
+        // isso é o aviso de sincronização no topo da tela.
+        if (ordered.isEmpty() && filterName != null) {
+            item {
+                val who = if (filterName == currentMemberName) "você" else filterName
+                Text(
+                    text = "Nenhum lançamento envolvendo $who.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 24.dp)
                 )
             }
         }
@@ -70,6 +154,15 @@ fun LancamentosScreen(
             )
         }
     }
+}
+
+private fun filterSubtitle(count: Int, filterName: String?, currentMemberName: String): String {
+    val suffix = when (filterName) {
+        null -> "no banco atual."
+        currentMemberName -> "envolvendo você."
+        else -> "envolvendo $filterName."
+    }
+    return "$count lançamentos $suffix"
 }
 
 @Composable

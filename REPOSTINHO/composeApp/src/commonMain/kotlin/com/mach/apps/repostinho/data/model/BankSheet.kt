@@ -53,6 +53,9 @@ data class Movement(
 ) {
     val participantCount: Int get() = weights.size
 
+    /** Pagou ou entrou no rateio — as duas formas de um lançamento dizer respeito a alguém. */
+    fun involves(name: String): Boolean = payer == name || weights.containsKey(name)
+
     /**
      * Quanto cada participante deve neste lançamento, em centavos.
      *

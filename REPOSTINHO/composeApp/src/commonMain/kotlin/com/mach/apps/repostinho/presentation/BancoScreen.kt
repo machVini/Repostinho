@@ -93,6 +93,11 @@ fun BancoScreen(
 
                 BancoTab.LANCAMENTOS -> LancamentosScreen(
                     movements = movements,
+                    // Os nomes vêm dos saldos, e não do cadastro de moradores do app: o
+                    // filtro compara com `payer` e as chaves de `weights`, que são as
+                    // colunas da planilha. Ex-morador entra na lista porque ainda aparece
+                    // em lançamento antigo.
+                    residentNames = balances.map { it.name },
                     currentMemberName = currentMemberName,
                     modifier = content
                 )
