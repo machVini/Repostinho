@@ -79,6 +79,16 @@ object RepIcons {
         )
     }
 
+    /** Chevron para baixo: o card está fechado e tocar abre. */
+    val ExpandMore: ImageVector by lazy {
+        icon("ExpandMore", "M16.59,8.59L12,13.17 7.41,8.59 6,10l6,6 6,-6z")
+    }
+
+    /** Chevron para cima: o card está aberto e tocar fecha. */
+    val ExpandLess: ImageVector by lazy {
+        icon("ExpandLess", "M12,8l-6,6 1.41,1.41L12,10.83l4.59,4.58L18,14z")
+    }
+
     /** Seta saindo da caixa: indica que o toque leva para fora do app. */
     val OpenExternal: ImageVector by lazy {
         icon(

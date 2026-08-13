@@ -1,5 +1,6 @@
 package com.mach.apps.repostinho.data.model
 
+import kotlin.math.floor
 import kotlinx.serialization.Serializable
 
 /*
@@ -51,6 +52,35 @@ data class Movement(
     val totalWeight: Double = 0.0
 ) {
     val participantCount: Int get() = weights.size
+
+    /**
+     * Quanto cada participante deve neste lançamento, em centavos.
+     *
+     * Reparte pelo maior resto: distribui a parte inteira de cada um e depois entrega os
+     * centavos que sobraram a quem ficou com o maior resto. Arredondar cada parte
+     * isoladamente deixaria a soma um ou dois centavos longe do valor do lançamento — e
+     * numa tela onde o total está logo acima, isso vira pergunta.
+     *
+     * Funciona com valor negativo (a planilha tem estornos): o resto fracionário continua
+     * entre 0 e 1 mesmo quando o piso é mais negativo que o valor exato.
+     */
+    fun sharesInCents(): Map<String, Long> {
+        if (weights.isEmpty() || totalWeight <= 0.0) return emptyMap()
+
+        val exact = weights.mapValues { (_, weight) -> valueCents * weight / totalWeight }
+        val shares = exact.mapValues { (_, value) -> floor(value).toLong() }.toMutableMap()
+
+        var leftover = valueCents - shares.values.sum()
+        // Quem tem o maior resto recebe o centavo antes de quem tem o menor.
+        val byRemainder = exact.entries.sortedByDescending { it.value - floor(it.value) }
+
+        for (entry in byRemainder) {
+            if (leftover <= 0L) break
+            shares[entry.key] = shares.getValue(entry.key) + 1L
+            leftover--
+        }
+        return shares
+    }
 }
 
 /** Uma linha da aba `Saldos_caixinha`. */
