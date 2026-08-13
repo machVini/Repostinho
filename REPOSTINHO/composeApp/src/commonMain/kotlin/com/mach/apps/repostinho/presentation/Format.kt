@@ -1,6 +1,6 @@
 package com.mach.apps.repostinho.presentation
 
-import com.mach.apps.repostinho.data.model.RepEvent
+import com.mach.apps.repostinho.data.model.EventOccurrence
 import kotlin.math.abs
 import kotlin.math.roundToLong
 
@@ -61,8 +61,8 @@ fun formatWeight(weight: Double): String {
 }
 
 /*
- * Nomes de mês escritos à mão porque não há `kotlinx-datetime` no projeto e o
- * `java.time` não existe no alvo iOS.
+ * Nomes de mês escritos à mão: o `kotlinx-datetime` entrou no projeto pelo rodízio, mas
+ * ele não traz nomes localizados, e o `java.time` não existe no alvo iOS.
  */
 private val MONTHS = listOf(
     "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -77,13 +77,18 @@ fun monthAbbrev(month: Int): String = monthName(month).take(3).uppercase()
 /**
  * "15 de agosto" para um dia só, "19 a 22 de novembro" quando o evento se estende dentro
  * do mesmo mês, e "30 de novembro a 2 de dezembro" quando atravessa a virada.
+ *
+ * Recebe a ocorrência, e não o evento: o aluguel é um cadastro só, mas cada mês tem a sua
+ * data, e é a data da vez que a linha precisa mostrar.
  */
-fun formatEventPeriod(event: RepEvent): String = when {
-    !event.isMultiDay -> "${event.start.day} de ${monthName(event.start.month)}"
+fun formatOccurrencePeriod(occurrence: EventOccurrence): String = when {
+    !occurrence.isMultiDay ->
+        "${occurrence.start.day} de ${monthName(occurrence.start.month)}"
 
-    event.start.month == event.end.month ->
-        "${event.start.day} a ${event.end.day} de ${monthName(event.start.month)}"
+    occurrence.start.month == occurrence.end.month ->
+        "${occurrence.start.day} a ${occurrence.end.day} de " +
+            monthName(occurrence.start.month)
 
-    else -> "${event.start.day} de ${monthName(event.start.month)} a " +
-        "${event.end.day} de ${monthName(event.end.month)}"
+    else -> "${occurrence.start.day} de ${monthName(occurrence.start.month)} a " +
+        "${occurrence.end.day} de ${monthName(occurrence.end.month)}"
 }

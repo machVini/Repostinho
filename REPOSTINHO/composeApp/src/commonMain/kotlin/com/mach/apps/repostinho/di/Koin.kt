@@ -1,6 +1,7 @@
 package com.mach.apps.repostinho.di
 
 import com.mach.apps.repostinho.data.local.BankSheetCache
+import com.mach.apps.repostinho.data.local.EventsCache
 import com.mach.apps.repostinho.data.local.MeetingNotesCache
 import com.mach.apps.repostinho.data.local.RotationPreferenceStore
 import com.mach.apps.repostinho.data.local.ThemePreferenceStore
@@ -9,10 +10,11 @@ import com.mach.apps.repostinho.data.repository.BankSheetRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
 import com.mach.apps.repostinho.data.repository.EventRepository
 import com.mach.apps.repostinho.data.remote.BankApi
-import com.mach.apps.repostinho.data.repository.InMemoryEventRepository
+
 import com.mach.apps.repostinho.data.repository.InMemoryResidentRepository
 import com.mach.apps.repostinho.data.repository.MeetingNotesRepository
 import com.mach.apps.repostinho.data.repository.RemoteBankSheetRepository
+import com.mach.apps.repostinho.data.repository.RemoteEventRepository
 import com.mach.apps.repostinho.data.repository.RotatingChoreRepository
 import com.mach.apps.repostinho.data.repository.RemoteMeetingNotesRepository
 import com.mach.apps.repostinho.data.repository.ResidentRepository
@@ -28,7 +30,11 @@ fun appModule(cacheDirectory: String) = module {
     // Moradores e eventos ainda são fixos no código e se perdem ao fechar o app.
     // Só o banco tem fonte de verdade fora dele (a planilha).
     single<ResidentRepository> { InMemoryResidentRepository() }
-    single<EventRepository> { InMemoryEventRepository() }
+
+    // A agenda fixa vem no binário; o que a rep cadastra pela tela mora no banco-api,
+    // para aparecer no celular de todos.
+    single { EventsCache(textFileStore(cacheDirectory)) }
+    single<EventRepository> { RemoteEventRepository(get(), get()) }
 
     // As tarefas também são fixas, mas quem faz cada uma sai da data: o rodízio é
     // calculado, e só a pausa precisa ficar gravada.

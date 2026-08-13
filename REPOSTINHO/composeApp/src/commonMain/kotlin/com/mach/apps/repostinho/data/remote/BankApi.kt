@@ -4,6 +4,7 @@ import com.mach.apps.repostinho.data.model.CaixinhaLine
 import com.mach.apps.repostinho.data.model.MeetingNotes
 import com.mach.apps.repostinho.data.model.MemberBalance
 import com.mach.apps.repostinho.data.model.Movement
+import com.mach.apps.repostinho.data.model.RepEvent
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -60,6 +61,18 @@ private data class ChoreDoneRequest(
     val done: Boolean
 )
 
+/** Os eventos que a rep cadastrou pelo app — a agenda fixa não passa por aqui. */
+@Serializable
+data class EventsPayload(
+    val events: List<RepEvent> = emptyList()
+)
+
+@Serializable
+private data class AddEventRequest(val event: RepEvent)
+
+@Serializable
+private data class RemoveEventRequest(val remove: String)
+
 class BankApi(private val client: HttpClient) {
 
     /**
@@ -85,18 +98,32 @@ class BankApi(private val client: HttpClient) {
      * Devolve a lista já atualizada pelo Worker, e não só um "ok": se alguém marcou outra
      * tarefa entre a leitura e este toque, a resposta já traz as duas.
      */
-    suspend fun setChoreDone(week: Int, choreId: String, done: Boolean): ChoreDonePayload {
+    suspend fun setChoreDone(week: Int, choreId: String, done: Boolean): ChoreDonePayload =
+        post("tarefas", ChoreDoneRequest(week = week, choreId = choreId, done = done))
+
+    /** A agenda cadastrada pela rep. Lança em caso de falha. */
+    suspend fun fetchEvents(): EventsPayload = get("eventos")
+
+    /** Cadastra (ou corrige, se o id já existir) um evento para todos. */
+    suspend fun addEvent(event: RepEvent): EventsPayload =
+        post("eventos", AddEventRequest(event))
+
+    /** Apaga um evento da agenda de todos. Só vale para os cadastrados pela tela. */
+    suspend fun removeEvent(eventId: String): EventsPayload =
+        post("eventos", RemoveEventRequest(eventId))
+
+    private suspend inline fun <reified B, reified T> post(path: String, body: B): T {
         check(BankApiConfig.isConfigured) {
             "bancoApi.baseUrl ausente no local.properties"
         }
 
-        val response = client.post("${BankApiConfig.BASE_URL.trimEnd('/')}/tarefas") {
+        val response = client.post("${BankApiConfig.BASE_URL.trimEnd('/')}/$path") {
             header("x-rep-token", BankApiConfig.TOKEN)
             contentType(ContentType.Application.Json)
-            setBody(ChoreDoneRequest(week = week, choreId = choreId, done = done))
+            setBody(body)
         }
         if (!response.status.isSuccess()) {
-            error("banco-api respondeu ${response.status.value} em /tarefas")
+            error("banco-api respondeu ${response.status.value} em /$path")
         }
         return response.body()
     }

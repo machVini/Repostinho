@@ -44,6 +44,19 @@ const TAREFAS_PREFIX = "feitas:v1";
  */
 const TAREFAS_TTL_SECONDS = 60 * 24 * 60 * 60;
 
+/**
+ * Onde a agenda adicionada pela rep fica.
+ *
+ * Sem TTL, ao contrário das tarefas: um evento cadastrado vale até alguém apagar. Mora no
+ * mesmo KV das tarefas porque são duas listas pequenas do mesmo app — um namespace por
+ * chave só multiplicaria configuração.
+ */
+const EVENTOS_KEY = "eventos:v1";
+
+/** O que o app sabe desenhar. Categoria desconhecida vira ROLE em vez de derrubar a tela. */
+const EVENT_CATEGORIES = ["ANIVERSARIO", "ROLE", "CONTA", "ARU"];
+const RECURRENCES = ["NENHUMA", "MENSAL", "ANUAL"];
+
 /** Nomes das abas na planilha. Mudou lá, muda aqui. */
 const SHEET_BALANCES = "Saldos_pessoas";
 const SHEET_MOVEMENTS = "Movimentações";
@@ -396,6 +409,97 @@ function weekParam(value) {
 }
 
 /**
+ * Os eventos que a rep cadastrou pelo app.
+ *
+ * Só os adicionados pela tela moram aqui. A agenda fixa (aluguel, aniversários, InterReps)
+ * vem embutida no app: ela vale mesmo sem rede e não faz sentido alguém poder apagá-la de
+ * um toque. O app junta as duas listas.
+ */
+async function handleEventos(request, env) {
+  if (!env.TAREFAS) {
+    return json({ error: "KV TAREFAS não configurado" }, 500);
+  }
+
+  if (request.method === "GET") {
+    return eventosResponse(await readEventos(env));
+  }
+
+  if (request.method !== "POST") {
+    return json({ error: "method not allowed" }, 405);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "corpo não é JSON" }, 400);
+  }
+
+  const current = await readEventos(env);
+  let updated;
+
+  if (body?.remove) {
+    const id = String(body.remove);
+    updated = current.filter((event) => event.id !== id);
+    if (updated.length === current.length) {
+      return json({ error: "evento não encontrado" }, 404);
+    }
+  } else {
+    const event = validEvent(body?.event);
+    if (!event) return json({ error: "evento inválido" }, 400);
+    // Mesmo id sobrescreve: reenviar depois de um timeout corrige em vez de duplicar.
+    updated = [...current.filter((it) => it.id !== event.id), event];
+  }
+
+  await env.TAREFAS.put(EVENTOS_KEY, JSON.stringify(updated));
+  return eventosResponse(updated);
+}
+
+async function readEventos(env) {
+  const raw = await env.TAREFAS.get(EVENTOS_KEY, { type: "json" });
+  if (!Array.isArray(raw)) return [];
+  return raw.map(validEvent).filter(Boolean);
+}
+
+/**
+ * Aceita só o que o app consegue desenhar.
+ *
+ * Um campo torto gravado aqui viraria exceção de desserialização no Kotlin, e o app não
+ * abriria a agenda — melhor recusar na entrada do que derrubar a tela de todo mundo.
+ */
+function validEvent(raw) {
+  if (!raw || typeof raw !== "object") return null;
+
+  const id = typeof raw.id === "string" ? raw.id.trim() : "";
+  const name = typeof raw.name === "string" ? raw.name.trim() : "";
+  const start = validDate(raw.start);
+  if (!id || !name || !start) return null;
+
+  const end = validDate(raw.end) ?? start;
+  const category = EVENT_CATEGORIES.includes(raw.category) ? raw.category : "ROLE";
+  const recurrence = RECURRENCES.includes(raw.recurrence) ? raw.recurrence : "NENHUMA";
+
+  // isCustom é sempre true: tudo que está no KV veio da tela, e é justamente isso que
+  // autoriza apagar. Um cliente não pode se declarar fixo para virar inapagável.
+  return { id, name, start, end, category, recurrence, isHighlight: false, isCustom: true };
+}
+
+function validDate(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const { day, month, year } = raw;
+  const ok =
+    Number.isInteger(day) && day >= 1 && day <= 31 &&
+    Number.isInteger(month) && month >= 1 && month <= 12 &&
+    Number.isInteger(year) && year >= 2000 && year <= 2100;
+  return ok ? { day, month, year } : null;
+}
+
+/** Agenda é estado vivo: cachear na borda esconderia o evento recém-criado. */
+function eventosResponse(events) {
+  return json({ events }, 200, { "cache-control": "no-store" });
+}
+
+/**
  * Chave de cache que muda quando a resposta deveria mudar.
  *
  * `wrangler deploy` não limpa o cache de borda: uma entrada gravada antes continua sendo
@@ -444,6 +548,7 @@ export default {
 
     if (url.pathname === "/atas") return handleAtas(request, env, ctx);
     if (url.pathname === "/tarefas") return handleTarefas(request, env);
+    if (url.pathname === "/eventos") return handleEventos(request, env);
     if (url.pathname !== "/banco") {
       return json({ error: "not found" }, 404);
     }
