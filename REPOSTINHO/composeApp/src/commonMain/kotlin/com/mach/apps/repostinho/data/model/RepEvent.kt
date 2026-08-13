@@ -25,6 +25,7 @@ data class RepDate(val day: Int, val month: Int, val year: Int) : Comparable<Rep
 @Serializable
 enum class EventCategory(val label: String) {
     ANIVERSARIO("Aniversários"),
+    REP("Eventos da Rep"),
     ROLE("Rolês"),
     ARU("ARU")
 }
