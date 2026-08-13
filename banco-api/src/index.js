@@ -114,23 +114,6 @@ export function readBalances(sheet, [first, last], isFormer) {
   return out;
 }
 
-/**
- * Quem pode entrar no rateio, na ordem das colunas da planilha.
- *
- * É o cabeçalho de F a AD — a mesma lista que o formulário de lançamento repete como um
- * campo de peso por pessoa. Sai daqui para o app não precisar de uma terceira cópia dos
- * nomes: hoje eles já existem na planilha e no Forms, e uma chumbada no Kotlin seria a
- * primeira a ficar velha quando alguém entrasse ou saísse da rep.
- */
-export function readParticipants(sheet) {
-  const out = [];
-  for (let col = MOVEMENT_FIRST_COL; col <= MOVEMENT_LAST_COL; col++) {
-    const name = text(cell(sheet, 1, col));
-    if (name) out.push(name);
-  }
-  return out;
-}
-
 export function readMovements(sheet) {
   const range = XLSX.utils.decode_range(sheet["!ref"]);
   const lastRow = range.e.r + 1;
@@ -624,7 +607,6 @@ export default {
       ],
       movements: readMovements(movementsSheet),
       caixinha: readCaixinha(caixinhaSheet),
-      participants: readParticipants(movementsSheet),
     };
 
     const response = json(payload, 200, {

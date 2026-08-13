@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -29,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +53,10 @@ fun LancamentosScreen(
     // então não pode ser um nome vazio — colidiria se algum dia existisse um assim.
     var filterName by remember { mutableStateOf<String?>(null) }
     var menuExpanded by remember { mutableStateOf(false) }
+    var lancando by remember { mutableStateOf(false) }
+
+    // O lançamento sai daqui para o Forms, que é quem de fato escreve na planilha.
+    val uriHandler = LocalUriHandler.current
 
     val filtered = remember(movements, filterName) {
         filterName?.let { name -> movements.filter { it.involves(name) } } ?: movements
@@ -127,6 +133,15 @@ fun LancamentosScreen(
             }
         }
 
+        item {
+            Button(
+                onClick = { lancando = true },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+            ) {
+                Text("Novo lançamento")
+            }
+        }
+
         // Só com filtro: sem ele, lista vazia é planilha não carregada, e quem explica
         // isso é o aviso de sincronização no topo da tela.
         if (ordered.isEmpty() && filterName != null) {
@@ -147,12 +162,22 @@ fun LancamentosScreen(
 
         item {
             Text(
-                text = "Os lançamentos continuam sendo feitos na planilha — o app só mostra.",
+                text = "Quem grava o lançamento é o formulário, não o app — a planilha " +
+                    "segue sendo a fonte da verdade.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 16.dp)
             )
         }
+    }
+
+    if (lancando) {
+        LancamentoDialog(
+            participants = residentNames,
+            currentMemberName = currentMemberName,
+            onDismiss = { lancando = false },
+            onOpenForm = { uriHandler.openUri(it) }
+        )
     }
 }
 
