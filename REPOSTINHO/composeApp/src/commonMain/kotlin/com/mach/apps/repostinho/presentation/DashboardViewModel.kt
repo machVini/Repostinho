@@ -15,6 +15,7 @@ import com.mach.apps.repostinho.data.repository.EventRepository
 import com.mach.apps.repostinho.data.repository.InMemoryResidentRepository
 import com.mach.apps.repostinho.data.repository.MeetingNotesRepository
 import com.mach.apps.repostinho.data.repository.ResidentRepository
+import com.mach.apps.repostinho.data.repository.RotationStatus
 import com.mach.apps.repostinho.data.repository.SyncState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -106,6 +107,14 @@ class DashboardViewModel(
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val rotation: StateFlow<RotationStatus> = choreRepository.getRotationStatus()
+        .catch { emit(RotationStatus(week = 0, rangeLabel = "", isPaused = false)) }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            RotationStatus(week = 0, rangeLabel = "", isPaused = false)
+        )
+
     val events: StateFlow<List<RepEvent>> = eventRepository.getEvents()
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -131,6 +140,31 @@ class DashboardViewModel(
         // As atas vêm no mesmo gesto: são duas listas da mesma tela, e ninguém espera
         // puxar duas vezes.
         viewModelScope.launch { meetingNotesRepository.refresh(fresh) }
+        // A escala não vem da rede, mas depende da data: sem recalcular aqui, um app
+        // deixado aberto atravessa a quarta-feira mostrando a semana anterior.
+        viewModelScope.launch { choreRepository.refresh() }
+    }
+
+    /**
+     * Rebusca só a escala e o que a rep já marcou.
+     *
+     * A aba de Tarefas chama isto ao ser aberta: sem isso, uma tarefa marcada por outro
+     * morador só apareceria na próxima abertura do app, e a tela prometeria um
+     * compartilhamento que ela não estaria mostrando.
+     */
+    fun refreshChores() {
+        viewModelScope.launch { choreRepository.refresh() }
+    }
+
+    /**
+     * Congela ou destrava o rodízio. Pausado, ninguém troca de tarefa na quarta.
+     *
+     * Sem botão na tela por enquanto: pausar valeria só neste aparelho, e a escala parada
+     * num celular enquanto gira nos outros confunde mais do que ajuda. A lógica fica
+     * pronta e testada para quando a escala passar a ser compartilhada.
+     */
+    fun setRotationPaused(paused: Boolean) {
+        viewModelScope.launch { choreRepository.setPaused(paused) }
     }
 
     /** Só a tarefa do próprio morador pode ser marcada; as outras são consulta. */

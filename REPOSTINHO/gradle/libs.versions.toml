@@ -16,6 +16,9 @@ material3 = "1.10.0-alpha05"
 koin = "3.5.3"
 koinCompose = "1.1.2"
 ktor = "2.3.12"
+# Datas no KMP: o rodízio das tarefas precisa saber em que semana estamos.
+# 0.7 é o que o Compose já puxa; declarar menos aqui só esconderia a versão real.
+kotlinxDatetime = "0.7.1"
 # Firebase Multiplatform (GitLive)
 firebase-kotlin = "1.10.4"
 # Ciclo de vida e ViewModels no KMP
@@ -44,6 +47,7 @@ ktor-client-contentNegotiation = { module = "io.ktor:ktor-client-content-negotia
 ktor-serialization-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

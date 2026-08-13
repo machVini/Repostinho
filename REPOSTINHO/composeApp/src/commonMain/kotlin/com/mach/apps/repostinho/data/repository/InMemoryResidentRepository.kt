@@ -59,7 +59,9 @@ class InMemoryResidentRepository : ResidentRepository {
             Resident("tz", "TZ", RoomType.TRIPLO_MAIOR),
             // Triplo menor
             Resident("lameu", "Lameu", RoomType.TRIPLO_MENOR),
-            Resident("picasso", "Picasso", RoomType.TRIPLO_MENOR),
+            // Saiu da rep: fica no cadastro como inativo porque os lançamentos antigos do
+            // banco têm o nome dele, e sumir com ele deixaria aqueles rateios sem dono.
+            Resident("picasso", "Picasso", RoomType.TRIPLO_MENOR, isActive = false),
             Resident("prazer", "Prazer", RoomType.TRIPLO_MENOR)
         )
     }

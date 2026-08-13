@@ -16,6 +16,7 @@ wrangler secret put SHEET_URL        # link de download direto da planilha
 wrangler secret put API_TOKEN        # qualquer string longa; a mesma vai no app
 wrangler secret put DRIVE_FOLDER_ID  # id da pasta das atas no Drive
 wrangler secret put DRIVE_API_KEY    # chave de API do Google com Drive API habilitada
+wrangler kv namespace create TAREFAS # id vai para o wrangler.toml, não é secret
 wrangler deploy
 ```
 
@@ -67,6 +68,34 @@ data reconhecível cai para a data de criação, o que mistura dois critérios d
 mesma lista. `test/atas.test.mjs` cobre esses casos.
 
 Respostas do banco são cacheadas por 5 minutos na borda; as atas, por 30 minutos.
+
+`GET /tarefas?semana=N` e `POST /tarefas`, mesmo header, guardam quais tarefas da escala
+já foram feitas na semana:
+
+```json
+{ "week": 0, "doneChoreIds": ["louca", "lixo"] }
+```
+
+O `POST` recebe `{ "week": 0, "choreId": "louca", "done": true }` e devolve a lista já
+atualizada — não um "ok" — para que uma marcação feita por outro morador entre a leitura e
+o toque venha junto na resposta.
+
+É o único estado que o Worker **grava**; o resto ele só lê e converte. Fica num KV, com a
+semana na chave: a virada de quarta-feira zera as marcações sozinha, porque a semana
+seguinte é outra chave, que ainda não existe. As entradas expiram em 60 dias.
+
+Quem conta a semana é o app, não o Worker. A regra do rodízio (quando vira, se está
+pausado) mora no Kotlin, e recalculá-la aqui criaria duas versões da mesma conta para
+discordarem. O preço é que um aparelho com a data errada marca na semana errada.
+
+Duas coisas a saber: `semana` ausente é **400**, não semana 0 — `Number(null)` é 0, e sem
+essa guarda um app que esquecesse o parâmetro escreveria na semana da âncora sem reclamar.
+E a escrita é ler-alterar-gravar, sem operação atômica: duas pessoas marcando no mesmo
+segundo podem perder uma das marcas. Numa rep de 15 pessoas isso é raro e o conserto é
+remarcar; resolver de verdade exigiria um Durable Object.
+
+Estas respostas não são cacheadas (`no-store`): marcação é estado vivo, e a borda mostraria
+a caixa desmarcada logo depois do toque.
 
 ### A pasta precisa estar aberta por link
 

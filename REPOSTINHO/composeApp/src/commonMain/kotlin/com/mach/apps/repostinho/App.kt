@@ -17,6 +17,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -74,8 +75,16 @@ fun App() {
             val tasks by viewModel.tasks.collectAsStateWithLifecycle()
             val events by viewModel.events.collectAsStateWithLifecycle()
             val notes by viewModel.meetingNotes.collectAsStateWithLifecycle()
+            val rotation by viewModel.rotation.collectAsStateWithLifecycle()
 
             var selectedTab by remember { mutableStateOf(AppTab.HOME) }
+
+            // Entrar na aba de Tarefas rebusca o que a rep marcou. É o gesto mais próximo
+            // de "quero ver a escala agora" que existe nesta tela, que não tem
+            // puxar-para-atualizar.
+            LaunchedEffect(selectedTab) {
+                if (selectedTab == AppTab.TAREFAS) viewModel.refreshChores()
+            }
 
             // O app não tem pilha de navegação: as abas são um `when`. Para o botão de
             // voltar ter o que desfazer, as trocas de aba ficam registradas aqui.
@@ -205,6 +214,7 @@ fun App() {
                             tasks = tasks,
                             residents = state.residents,
                             currentResidentId = state.currentResidentId,
+                            rotation = rotation,
                             onSetDone = viewModel::setTaskDone,
                             modifier = inset
                         )

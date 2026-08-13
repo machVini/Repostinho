@@ -2,17 +2,18 @@ package com.mach.apps.repostinho.di
 
 import com.mach.apps.repostinho.data.local.BankSheetCache
 import com.mach.apps.repostinho.data.local.MeetingNotesCache
+import com.mach.apps.repostinho.data.local.RotationPreferenceStore
 import com.mach.apps.repostinho.data.local.ThemePreferenceStore
 import com.mach.apps.repostinho.data.local.textFileStore
 import com.mach.apps.repostinho.data.repository.BankSheetRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
 import com.mach.apps.repostinho.data.repository.EventRepository
 import com.mach.apps.repostinho.data.remote.BankApi
-import com.mach.apps.repostinho.data.repository.InMemoryChoreRepository
 import com.mach.apps.repostinho.data.repository.InMemoryEventRepository
 import com.mach.apps.repostinho.data.repository.InMemoryResidentRepository
 import com.mach.apps.repostinho.data.repository.MeetingNotesRepository
 import com.mach.apps.repostinho.data.repository.RemoteBankSheetRepository
+import com.mach.apps.repostinho.data.repository.RotatingChoreRepository
 import com.mach.apps.repostinho.data.repository.RemoteMeetingNotesRepository
 import com.mach.apps.repostinho.data.repository.ResidentRepository
 import com.mach.apps.repostinho.presentation.DashboardViewModel
@@ -24,11 +25,15 @@ import org.koin.dsl.module
  * no Android depende do `Context`, que só existe na `Application`.
  */
 fun appModule(cacheDirectory: String) = module {
-    // Moradores, tarefas e eventos ainda são fixos no código e se perdem ao fechar o app.
+    // Moradores e eventos ainda são fixos no código e se perdem ao fechar o app.
     // Só o banco tem fonte de verdade fora dele (a planilha).
     single<ResidentRepository> { InMemoryResidentRepository() }
-    single<ChoreRepository> { InMemoryChoreRepository() }
     single<EventRepository> { InMemoryEventRepository() }
+
+    // As tarefas também são fixas, mas quem faz cada uma sai da data: o rodízio é
+    // calculado, e só a pausa precisa ficar gravada.
+    single { RotationPreferenceStore(textFileStore(cacheDirectory)) }
+    single<ChoreRepository> { RotatingChoreRepository(get(), get()) }
 
     // O banco vem da planilha da rep, convertida em JSON pelo banco-api, e a última
     // resposta boa fica em disco para as aberturas sem rede.

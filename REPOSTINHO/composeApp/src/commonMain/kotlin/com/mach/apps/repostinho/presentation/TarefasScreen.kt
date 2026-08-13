@@ -18,12 +18,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mach.apps.repostinho.data.model.ChoreTask
 import com.mach.apps.repostinho.data.model.Resident
+import com.mach.apps.repostinho.data.repository.RotationStatus
+import com.mach.apps.repostinho.ui.accentColor
 
 @Composable
 fun TarefasScreen(
     tasks: List<ChoreTask>,
     residents: List<Resident>,
     currentResidentId: String,
+    rotation: RotationStatus,
     onSetDone: (taskId: String, done: Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -43,6 +46,10 @@ fun TarefasScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+
+        item {
+            RotationCard(rotation = rotation)
         }
 
         items(tasks) { task ->
@@ -96,11 +103,47 @@ fun TarefasScreen(
 
         item {
             Text(
-                text = "As duplas estão fixas por enquanto — o rodízio automático ainda " +
-                    "não foi implementado.",
+                text = "A escala vira sozinha toda quarta-feira. Quem está em cada dupla " +
+                    "ainda é fixo no app.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 16.dp)
+            )
+        }
+    }
+}
+
+/**
+ * De quando até quando vale esta escala.
+ *
+ * O intervalo é a primeira pergunta de quem abre a tela ("essa é a desta semana ou a da
+ * passada?"), então ele vem antes da lista, não num rodapé.
+ *
+ * O controle de pausa existe no repositório e está testado, mas não aparece aqui por
+ * enquanto: pausar só valeria neste aparelho, e uma escala congelada num celular e
+ * girando nos outros é pior do que não poder pausar.
+ */
+@Composable
+private fun RotationCard(rotation: RotationStatus) {
+    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(
+                text = "Semana ${rotation.rangeLabel}",
+                fontWeight = FontWeight.Bold,
+                color = accentColor()
+            )
+            Text(
+                text = if (rotation.isShared) {
+                    "O que você marcar aparece para a rep."
+                } else {
+                    "Sem conexão — o que você marcar fica só neste aparelho."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = if (rotation.isShared) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.error
+                }
             )
         }
     }
