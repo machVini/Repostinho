@@ -7,7 +7,7 @@ import coil3.request.CachePolicy
 import coil3.request.crossfade
 import com.mach.apps.repostinho.data.remote.BankApiConfig
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.DefaultRequest
+import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.request.header
 
 /**
@@ -39,10 +39,22 @@ private val apiHost: String = BankApiConfig.BASE_URL
     .substringBefore("/")
     .substringBefore(":")
 
-private fun authorizedClient(): HttpClient = HttpClient {
-    install(DefaultRequest) {
-        if (apiHost.isNotBlank() && url.host == apiHost) {
-            header("x-rep-token", BankApiConfig.TOKEN)
+/**
+ * Põe o token nas chamadas ao banco-api, e só nelas.
+ *
+ * É um plugin, e não `DefaultRequest`, porque aquele recebe um builder de **valores
+ * padrão**: o `url` de lá não é o da requisição em curso, então comparar o host contra ele
+ * nunca casava, o cabeçalho nunca ia junto e toda foto voltava 401 — aparecendo como
+ * monograma, indistinguível de morador sem foto. Aqui a requisição real é inspecionada.
+ */
+private val RepToken = createClientPlugin("RepToken") {
+    onRequest { request, _ ->
+        if (apiHost.isNotBlank() && request.url.host == apiHost) {
+            request.header("x-rep-token", BankApiConfig.TOKEN)
         }
     }
+}
+
+private fun authorizedClient(): HttpClient = HttpClient {
+    install(RepToken)
 }

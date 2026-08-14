@@ -12,11 +12,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +46,7 @@ fun PerfilScreen(
     tasks: List<ChoreTask>,
     modifier: Modifier = Modifier
 ) {
+    var saindo by remember { mutableStateOf(false) }
     val resident = state.currentResident
     val myTask = tasks.firstOrNull { state.currentResidentId in it.assigneeIds }
 
@@ -112,6 +121,34 @@ fun PerfilScreen(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
         }
+
+        item {
+            OutlinedButton(
+                onClick = { saindo = true },
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
+            ) {
+                Text("Sair")
+            }
+        }
+    }
+
+    if (saindo) {
+        AlertDialog(
+            onDismissRequest = { saindo = false },
+            title = { Text("Sair da conta?") },
+            // Diz o que ainda não acontece: um botão que confirma e não faz nada parece
+            // quebrado, e é melhor ser explícito do que deixar a pessoa achando que saiu.
+            text = { Text("O login ainda não existe, então isto não desconecta nada por enquanto.") },
+            confirmButton = {
+                TextButton(onClick = { saindo = false }) { Text("Sair") }
+            },
+            dismissButton = {
+                TextButton(onClick = { saindo = false }) { Text("Cancelar") }
+            }
+        )
     }
 }
 
