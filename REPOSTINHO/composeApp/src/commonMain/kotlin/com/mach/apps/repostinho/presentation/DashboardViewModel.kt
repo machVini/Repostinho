@@ -12,10 +12,10 @@ import com.mach.apps.repostinho.data.model.Movement
 import com.mach.apps.repostinho.data.model.RepDate
 import com.mach.apps.repostinho.data.model.RepEvent
 import com.mach.apps.repostinho.data.model.Resident
+import com.mach.apps.repostinho.data.repository.AuthRepository
 import com.mach.apps.repostinho.data.repository.BankSheetRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
 import com.mach.apps.repostinho.data.repository.EventRepository
-import com.mach.apps.repostinho.data.repository.RemoteResidentRepository
 import com.mach.apps.repostinho.data.repository.MeetingNotesRepository
 import com.mach.apps.repostinho.data.repository.ResidentRepository
 import com.mach.apps.repostinho.data.repository.RotatingChoreRepository
@@ -36,8 +36,8 @@ import kotlinx.datetime.todayIn
 
 data class BankUiState(
     val residents: List<Resident> = emptyList(),
-    /** Quem está usando o app. Fixo no VK enquanto não existe login. */
-    val currentResidentId: String = RemoteResidentRepository.CURRENT_USER_ID
+    /** Quem entrou no app. Vazio só entre a abertura e a leitura da sessão. */
+    val currentResidentId: String = ""
 ) {
     val currentResident: Resident?
         get() = residents.firstOrNull { it.id == currentResidentId }
@@ -53,7 +53,16 @@ data class SheetUiState(
     val balances: List<MemberBalance> = emptyList(),
     val movements: List<Movement> = emptyList(),
     val caixinha: List<CaixinhaLine> = emptyList(),
-    val syncState: SyncState = SyncState.Loading
+    val syncState: SyncState = SyncState.Loading,
+    /**
+     * O nome de quem está logado **como ele aparece na planilha**.
+     *
+     * A planilha é a fonte dos saldos e ela usa os apelidos dela ("Gu", "Leozin"). Se o
+     * nome do morador no app não bater com a coluna, o saldo não é encontrado e a pessoa
+     * vê a tela como se não devesse nada — por isso o casamento é por este campo, e não
+     * pelo id.
+     */
+    val currentMemberName: String = ""
 ) {
     /** Move o indicador do "puxar para atualizar". */
     val isRefreshing: Boolean get() = syncState is SyncState.Loading
@@ -61,7 +70,7 @@ data class SheetUiState(
     val activeMembers: List<MemberBalance> get() = balances.filter { !it.isFormer }
 
     val myBalanceCents: Long?
-        get() = balances.firstOrNull { it.name == CURRENT_MEMBER_NAME }?.finalCents
+        get() = balances.firstOrNull { it.name == currentMemberName }?.finalCents
 
     /** Soma do que a rep tem a receber de quem está devendo, em centavos. */
     val totalOwedCents: Long
@@ -70,14 +79,11 @@ data class SheetUiState(
     val caixinhaTotalCents: Long?
         get() = caixinha.firstOrNull { it.isTotal }?.finalCents
 
-    companion object {
-        /** O nome como ele aparece nas colunas da planilha, não um id do app. */
-        const val CURRENT_MEMBER_NAME = "VK"
-    }
 }
 
 @OptIn(ExperimentalTime::class)
 class DashboardViewModel(
+    private val authRepository: AuthRepository,
     private val residentRepository: ResidentRepository,
     private val choreRepository: ChoreRepository,
     private val eventRepository: EventRepository,
@@ -85,29 +91,36 @@ class DashboardViewModel(
     private val meetingNotesRepository: MeetingNotesRepository
 ) : ViewModel() {
 
-    private val currentResidentId =
-        MutableStateFlow(RemoteResidentRepository.CURRENT_USER_ID)
-
     val uiState: StateFlow<BankUiState> = combine(
         residentRepository.getResidents(),
-        currentResidentId
+        authRepository.currentResidentId()
     ) { residents, currentId ->
-        BankUiState(residents = residents, currentResidentId = currentId)
+        BankUiState(residents = residents, currentResidentId = currentId.orEmpty())
     }
         .catch { emit(BankUiState()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BankUiState())
+
+    /** O nome do morador logado, para casar com a coluna da planilha. */
+    private val uiStateNames = combine(
+        residentRepository.getResidents(),
+        authRepository.currentResidentId()
+    ) { residents, id ->
+        residents.firstOrNull { it.id == id }?.bankName.orEmpty()
+    }
 
     val sheet: StateFlow<SheetUiState> = combine(
         bankSheetRepository.getBalances(),
         bankSheetRepository.getMovements(),
         bankSheetRepository.getCaixinha(),
-        bankSheetRepository.getSyncState()
-    ) { balances, movements, caixinha, syncState ->
+        bankSheetRepository.getSyncState(),
+        uiStateNames
+    ) { balances, movements, caixinha, syncState, memberName ->
         SheetUiState(
             balances = balances,
             movements = movements,
             caixinha = caixinha,
-            syncState = syncState
+            syncState = syncState,
+            currentMemberName = memberName
         )
     }
         .catch { emit(SheetUiState()) }
@@ -249,7 +262,7 @@ class DashboardViewModel(
     /** Só a tarefa do próprio morador pode ser marcada; as outras são consulta. */
     fun setTaskDone(taskId: String, done: Boolean) {
         val task = tasks.value.firstOrNull { it.id == taskId } ?: return
-        if (task.isRest || currentResidentId.value !in task.assigneeIds) return
+        if (task.isRest || uiState.value.currentResidentId !in task.assigneeIds) return
 
         viewModelScope.launch { choreRepository.setDone(taskId, done) }
     }

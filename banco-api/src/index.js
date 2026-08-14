@@ -667,6 +667,14 @@ function validResident(raw) {
     birthMonth: birthDay !== null && birthMonth !== null ? birthMonth : null,
     joinedAt: typeof raw.joinedAt === "string" ? raw.joinedAt.trim() || null : null,
     photoUrl: typeof raw.photoUrl === "string" ? raw.photoUrl.trim() || null : null,
+    // Minúsculo sempre: é por ele que o login casa a conta com o morador, e "VK@x.com"
+    // e "vk@x.com" são o mesmo endereço para o provedor de autenticação.
+    email: typeof raw.email === "string"
+      ? raw.email.trim().toLowerCase() || null
+      : null,
+    // O nome dele na planilha, quando diferente. Sem isso o app procura a coluna pelo
+    // nome que exibe, não acha, e a pessoa vê saldo vazio como se não devesse nada.
+    sheetName: typeof raw.sheetName === "string" ? raw.sheetName.trim() || null : null,
   };
 }
 

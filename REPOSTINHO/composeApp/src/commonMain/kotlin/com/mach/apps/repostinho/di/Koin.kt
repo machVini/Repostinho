@@ -4,10 +4,15 @@ import com.mach.apps.repostinho.data.local.BankSheetCache
 import com.mach.apps.repostinho.data.local.EventsCache
 import com.mach.apps.repostinho.data.local.MeetingNotesCache
 import com.mach.apps.repostinho.data.local.ResidentsCache
+import com.mach.apps.repostinho.data.local.SessionStore
 import com.mach.apps.repostinho.data.local.RotationPreferenceStore
 import com.mach.apps.repostinho.data.local.ThemePreferenceStore
 import com.mach.apps.repostinho.data.local.textFileStore
+import com.mach.apps.repostinho.data.repository.AuthProvider
+import com.mach.apps.repostinho.data.repository.AuthRepository
 import com.mach.apps.repostinho.data.repository.BankSheetRepository
+import com.mach.apps.repostinho.data.repository.NoopAuthProvider
+import com.mach.apps.repostinho.data.repository.ResidentAuthRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
 import com.mach.apps.repostinho.data.repository.EventRepository
 import com.mach.apps.repostinho.data.remote.BankApi
@@ -20,6 +25,7 @@ import com.mach.apps.repostinho.data.repository.RotatingChoreRepository
 import com.mach.apps.repostinho.data.repository.RemoteMeetingNotesRepository
 import com.mach.apps.repostinho.data.repository.ResidentRepository
 import com.mach.apps.repostinho.presentation.DashboardViewModel
+import com.mach.apps.repostinho.presentation.LoginViewModel
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
 
@@ -57,8 +63,15 @@ fun appModule(cacheDirectory: String) = module {
     single { ThemePreferenceStore(textFileStore(cacheDirectory)) }
     single<MeetingNotesRepository> { RemoteMeetingNotesRepository(get(), get()) }
 
+    // Quem entra no app. O provedor é a única peça que o Firebase substitui — o resto
+    // do login (casar com o morador, guardar a sessão) não muda com ele.
+    single { SessionStore(textFileStore(cacheDirectory)) }
+    single<AuthProvider> { NoopAuthProvider() }
+    single<AuthRepository> { ResidentAuthRepository(get(), get(), get()) }
+
     // ViewModel (no KMP usamos o Compose ViewModel ou bibliotecas como Voyager/Decompose)
-    factory { DashboardViewModel(get(), get(), get(), get(), get()) }
+    factory { DashboardViewModel(get(), get(), get(), get(), get(), get()) }
+    factory { LoginViewModel(get()) }
 }
 
 // Função para inicializar o Koin (chamada no Android e iOS)

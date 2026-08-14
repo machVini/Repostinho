@@ -44,6 +44,7 @@ fun PerfilScreen(
     /** Saldo da planilha, não recalculado aqui — mesmo número que a Home e a aba Saldos. */
     myBalanceCents: Long?,
     tasks: List<ChoreTask>,
+    onSignOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var saindo by remember { mutableStateOf(false) }
@@ -115,7 +116,7 @@ fun PerfilScreen(
 
         item {
             Text(
-                text = "Sessão fixa no VK — ainda não há login.",
+                text = resident?.email ?: "Sem email cadastrado.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -139,11 +140,14 @@ fun PerfilScreen(
         AlertDialog(
             onDismissRequest = { saindo = false },
             title = { Text("Sair da conta?") },
-            // Diz o que ainda não acontece: um botão que confirma e não faz nada parece
-            // quebrado, e é melhor ser explícito do que deixar a pessoa achando que saiu.
-            text = { Text("O login ainda não existe, então isto não desconecta nada por enquanto.") },
+            text = { Text("Você vai precisar entrar de novo com email e senha.") },
             confirmButton = {
-                TextButton(onClick = { saindo = false }) { Text("Sair") }
+                TextButton(onClick = {
+                    saindo = false
+                    onSignOut()
+                }) {
+                    Text("Sair")
+                }
             },
             dismissButton = {
                 TextButton(onClick = { saindo = false }) { Text("Cancelar") }

@@ -21,13 +21,33 @@ data class Resident(
     /** "28/03/2026" — texto porque só é exibido, nunca comparado. */
     val joinedAt: String? = null,
     /**
+     * O email com que ele entra no app.
+     *
+     * É o que liga a conta de autenticação ao morador: sem isso, saber que alguém provou
+     * ter um email não diz de quem é o saldo nem qual é a tarefa da semana. Vazio quer
+     * dizer que a pessoa ainda não pode entrar.
+     */
+    val email: String? = null,
+    /**
+     * O nome dele **na planilha**, quando difere do nome no app.
+     *
+     * A planilha usa os apelidos dela ("Gu", "Leozin", "Mixirica") e é ela que fecha os
+     * saldos. Sem este vínculo explícito, o app procura a coluna pelo nome que exibe, não
+     * acha, e a pessoa vê a tela como se não devesse nada — que é o pior jeito de errar
+     * numa tela de dinheiro.
+     */
+    val sheetName: String? = null,
+    /**
      * URL da foto. Vazio cai no monograma com a inicial do nome.
      *
      * URL, e não imagem embutida: foto no binário obriga a publicar versão nova do app
      * toda vez que alguém troca a sua.
      */
     val photoUrl: String? = null
-)
+) {
+    /** Como procurá-lo nas colunas da planilha. */
+    val bankName: String get() = sheetName?.takeIf { it.isNotBlank() } ?: name
+}
 
 /** O quarto define o peso do morador no rateio do aluguel + contas fixas. */
 @Serializable
