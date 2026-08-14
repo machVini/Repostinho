@@ -728,8 +728,60 @@ function json(body, status, extraHeaders = {}) {
   });
 }
 
+/*
+ * CORS existe por causa do PWA.
+ *
+ * Cliente nativo ignora origem; navegador não. Como o app web roda num domínio diferente
+ * do Worker, sem estes cabeçalhos toda chamada é barrada antes mesmo de sair.
+ *
+ * `ALLOWED_ORIGINS` é uma lista separada por vírgula. Deixar em branco libera geral, o que
+ * serve para desenvolvimento — mas em produção vale restringir, porque um `*` combinado
+ * com token no cabeçalho deixa qualquer site pedir dados em nome de quem estiver logado.
+ */
+function corsHeaders(request, env) {
+  const origin = request.headers.get("origin");
+  if (!origin) return {};
+
+  const permitidas = (env.ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  if (permitidas.length > 0 && !permitidas.includes(origin)) return {};
+
+  return {
+    "access-control-allow-origin": origin,
+    "access-control-allow-headers": "authorization, content-type, x-rep-token",
+    "access-control-allow-methods": "GET, POST, PUT, OPTIONS",
+    "access-control-max-age": "86400",
+    // A origem entra na resposta, então o cache não pode servir a mesma para outra.
+    vary: "Origin",
+  };
+}
+
+function comCors(response, request, env) {
+  const headers = new Headers(response.headers);
+  for (const [chave, valor] of Object.entries(corsHeaders(request, env))) {
+    headers.set(chave, valor);
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
+    // O preflight vem sem credencial nenhuma: se ele passar pela checagem de token
+    // abaixo, leva 401 e o navegador cancela a chamada real antes de tentá-la.
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders(request, env) });
+    }
+    return comCors(await this.handle(request, env, ctx), request, env);
+  },
+
+  async handle(request, env, ctx) {
     const url = new URL(request.url);
 
     /*
