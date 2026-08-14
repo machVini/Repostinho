@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { verificarTokenFirebase, tokenDoCabecalho } from "./auth.js";
 
 /*
  * Converte a planilha do banco da rep em JSON para o app.
@@ -731,10 +732,17 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // Token compartilhado. Isto é obstáculo, não autenticação: ele está no binário do
-    // app e pode ser extraído. Serve para o endpoint não ficar aberto a quem topar com
-    // a URL — segurança de verdade exigiria login por morador.
-    if (env.API_TOKEN && request.headers.get("x-rep-token") !== env.API_TOKEN) {
+    /*
+     * Duas credenciais, com papéis diferentes.
+     *
+     * O app manda o token do Firebase do morador logado — ele não carrega mais segredo
+     * nenhum embutido, então extrair o APK não dá acesso a nada. O `x-rep-token` deixou
+     * de viajar no binário e virou chave de administração, usada só nos cadastros por
+     * linha de comando.
+     */
+    const uid = await verificarTokenFirebase(tokenDoCabecalho(request), env.FIREBASE_PROJECT_ID);
+    const admin = env.API_TOKEN && request.headers.get("x-rep-token") === env.API_TOKEN;
+    if (!uid && !admin) {
       return json({ error: "unauthorized" }, 401);
     }
 

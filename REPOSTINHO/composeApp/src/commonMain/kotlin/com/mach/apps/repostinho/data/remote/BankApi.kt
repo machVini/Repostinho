@@ -80,7 +80,22 @@ private data class AddEventRequest(val event: RepEvent)
 @Serializable
 private data class RemoveEventRequest(val remove: String)
 
-class BankApi(private val client: HttpClient) {
+/**
+ * De onde sai a credencial de cada chamada.
+ *
+ * O app não carrega mais segredo embutido: manda o token do morador logado, que só existe
+ * para quem tem conta. Com o segredo compartilhado no binário, extrair o APK dava acesso a
+ * saldos, emails e fotos da rep inteira — e o app vai para quinze aparelhos.
+ */
+fun interface AuthTokenProvider {
+    /** `null` quando ninguém está logado; aí a chamada nem sai. */
+    suspend fun idToken(): String?
+}
+
+class BankApi(
+    private val client: HttpClient,
+    private val tokens: AuthTokenProvider
+) {
 
     /**
      * Lança em caso de falha; quem chama decide o que fazer sem rede.
@@ -123,12 +138,9 @@ class BankApi(private val client: HttpClient) {
         post("eventos", RemoveEventRequest(eventId))
 
     private suspend inline fun <reified B, reified T> post(path: String, body: B): T {
-        check(BankApiConfig.isConfigured) {
-            "bancoApi.baseUrl ausente no local.properties"
-        }
-
+        val token = requireToken()
         val response = client.post("${BankApiConfig.BASE_URL.trimEnd('/')}/$path") {
-            header("x-rep-token", BankApiConfig.TOKEN)
+            header("Authorization", "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(body)
         }
@@ -139,18 +151,23 @@ class BankApi(private val client: HttpClient) {
     }
 
     private suspend inline fun <reified T> get(path: String, query: String = ""): T {
-        check(BankApiConfig.isConfigured) {
-            "bancoApi.baseUrl ausente no local.properties"
-        }
-
+        val token = requireToken()
         val suffix = if (query.isBlank()) "" else "?$query"
         val response = client.get("${BankApiConfig.BASE_URL.trimEnd('/')}/$path$suffix") {
-            header("x-rep-token", BankApiConfig.TOKEN)
+            header("Authorization", "Bearer $token")
         }
         if (!response.status.isSuccess()) {
             error("banco-api respondeu ${response.status.value} em /$path")
         }
         return response.body()
+    }
+
+    /** Falha cedo e com nome: 401 vindo da rede não diz que faltou fazer login. */
+    suspend fun requireToken(): String {
+        check(BankApiConfig.isConfigured) {
+            "bancoApi.baseUrl ausente no local.properties"
+        }
+        return tokens.idToken() ?: error("sem sessão do Firebase para chamar o banco-api")
     }
 
     companion object {

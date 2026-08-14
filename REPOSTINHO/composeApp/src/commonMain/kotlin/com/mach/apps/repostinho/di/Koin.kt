@@ -11,10 +11,12 @@ import com.mach.apps.repostinho.data.local.textFileStore
 import com.mach.apps.repostinho.data.repository.AuthProvider
 import com.mach.apps.repostinho.data.repository.AuthRepository
 import com.mach.apps.repostinho.data.repository.FirebaseAuthProvider
+import com.mach.apps.repostinho.data.repository.FirebaseTokens
 import com.mach.apps.repostinho.data.repository.BankSheetRepository
 import com.mach.apps.repostinho.data.repository.ResidentAuthRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
 import com.mach.apps.repostinho.data.repository.EventRepository
+import com.mach.apps.repostinho.data.remote.AuthTokenProvider
 import com.mach.apps.repostinho.data.remote.BankApi
 
 import com.mach.apps.repostinho.data.repository.MeetingNotesRepository
@@ -52,7 +54,8 @@ fun appModule(cacheDirectory: String) = module {
     // O banco vem da planilha da rep, convertida em JSON pelo banco-api, e a última
     // resposta boa fica em disco para as aberturas sem rede.
     single { BankApi.defaultClient() }
-    single { BankApi(get()) }
+    single<AuthTokenProvider> { FirebaseTokens() }
+    single { BankApi(get(), get()) }
     single { BankSheetCache(textFileStore(cacheDirectory)) }
     single<BankSheetRepository> { RemoteBankSheetRepository(get(), get()) }
 

@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mach.apps.repostinho.data.remote.AuthTokenProvider
 import com.mach.apps.repostinho.data.local.ThemeMode
 import com.mach.apps.repostinho.data.local.ThemePreferenceStore
 import com.mach.apps.repostinho.presentation.BancoScreen
@@ -64,7 +65,8 @@ fun App() {
     // a cor, e quem a guarda vem da injeção.
     // O Coil precisa do token para buscar a foto do morador no banco-api; sem isto toda
     // foto volta 401 e o perfil mostra o monograma como se ninguém tivesse foto.
-    setSingletonImageLoaderFactory { context -> repImageLoader(context) }
+    val tokens = koinInject<AuthTokenProvider>()
+    setSingletonImageLoaderFactory { context -> repImageLoader(context, tokens) }
 
     KoinContext {
         val themeStore = koinInject<ThemePreferenceStore>()

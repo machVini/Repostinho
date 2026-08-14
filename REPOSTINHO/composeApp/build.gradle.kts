@@ -10,11 +10,12 @@ plugins {
 }
 
 /*
- * A URL e o token do banco-api vêm do `local.properties`, que não vai para o git.
+ * A URL do banco-api vem do `local.properties`, que não vai para o git.
  *
- * O repositório é público: token commitado é token vazado, e é ele que separa os saldos
- * da rep da internet inteira. Com as chaves ausentes o app compila e roda usando o
- * retrato embutido, então quem clonar não fica travado.
+ * O token **não** entra mais no binário. Quem autoriza o app é o token do morador logado,
+ * emitido pelo Firebase; o `x-rep-token` virou chave de administração e fica só na máquina
+ * de quem cadastra por linha de comando. Enquanto ele era compilado aqui, extrair o APK
+ * dava acesso a saldos, emails e fotos da rep inteira — e o app vai para quinze aparelhos.
  */
 val bankApiProperties = Properties().apply {
     val file = rootProject.file("local.properties")
@@ -24,10 +25,8 @@ val bankApiProperties = Properties().apply {
 val generateBankApiConfig by tasks.registering {
     val outputDir = layout.buildDirectory.dir("generated/bankApi")
     val baseUrl = bankApiProperties.getProperty("bancoApi.baseUrl").orEmpty()
-    val token = bankApiProperties.getProperty("bancoApi.token").orEmpty()
 
     inputs.property("baseUrl", baseUrl)
-    inputs.property("token", token)
     outputs.dir(outputDir)
 
     doLast {
@@ -41,7 +40,6 @@ val generateBankApiConfig by tasks.registering {
             // Gerado pelo Gradle a partir do local.properties. Não edite à mão.
             internal object BankApiConfig {
                 const val BASE_URL = "$baseUrl"
-                const val TOKEN = "$token"
                 val isConfigured: Boolean get() = BASE_URL.isNotBlank()
             }
 
@@ -133,9 +131,34 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    /*
+     * Assinatura de release lida do `local.properties`, como a URL do banco-api.
+     *
+     * Sem ela o APK sai sem assinar e o Android recusa instalar. O keystore em si fica
+     * fora do repositório: perdê-lo significa nunca mais conseguir atualizar o app nos
+     * aparelhos que já o têm, porque o Android só aceita atualização assinada pela mesma
+     * chave.
+     */
+    val keystorePath = bankApiProperties.getProperty("repostinho.keystore").orEmpty()
+    val keystoreExiste = keystorePath.isNotBlank() && file(keystorePath).exists()
+
+    signingConfigs {
+        if (keystoreExiste) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = bankApiProperties.getProperty("repostinho.keystorePassword")
+                keyAlias = bankApiProperties.getProperty("repostinho.keyAlias")
+                keyPassword = bankApiProperties.getProperty("repostinho.keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+            // Sem keystore o build continua funcionando e sai sem assinar, para quem
+            // clonar não travar — só não dá para instalar.
+            if (keystoreExiste) signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
