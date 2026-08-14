@@ -67,7 +67,11 @@ fun LancamentosScreen(
     // Mais recente primeiro: na planilha os lançamentos são acrescentados no fim.
     val ordered = filtered.asReversed()
 
-    val otherNames = residentNames.filter { it != currentMemberName }
+    // A planilha entrega os nomes na ordem das colunas dela, que não ajuda quem procura
+    // alguém numa lista de 25.
+    val otherNames = remember(residentNames, currentMemberName) {
+        residentNames.filter { it != currentMemberName }.sortedByNome()
+    }
 
     LazyColumn(modifier = modifier.fillMaxWidth()) {
         item {

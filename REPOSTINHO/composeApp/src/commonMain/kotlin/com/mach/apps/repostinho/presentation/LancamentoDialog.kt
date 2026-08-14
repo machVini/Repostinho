@@ -70,7 +70,15 @@ fun LancamentoDialog(
     // Só oferece quem tem campo no Forms: um peso para alguém de fora não teria onde ser
     // preenchido, e o lançamento sairia errado sem ninguém perceber.
     val elegiveis = remember(participants) {
-        participants.filter { it in LancamentoForm.nomesConhecidos }
+        participants.filter { it in LancamentoForm.nomesConhecidos }.sortedByNome()
+    }
+
+    // Caixas nas pontas e pessoas em ordem alfabética no meio: misturar "Caix. Crédito"
+    // entre os nomes esconderia justamente as três opções que não são gente.
+    val pagadores = remember {
+        LancamentoForm.caixasDaRep +
+            LancamentoForm.nomesConhecidos.toList().sortedByNome() +
+            LancamentoForm.caixasExternos
     }
 
     // Nome -> peso como o morador digitou. Texto, e não Double, porque "0," no meio da
@@ -150,7 +158,7 @@ fun LancamentoDialog(
                 Rotulo("Pagador")
                 Seletor(
                     selecionado = payer,
-                    opcoes = LancamentoForm.pagadores,
+                    opcoes = pagadores,
                     onSelect = { payer = it }
                 )
 

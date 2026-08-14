@@ -5,6 +5,7 @@ import com.mach.apps.repostinho.data.remote.LancamentoDraft
 import com.mach.apps.repostinho.data.remote.LancamentoForm
 import com.mach.apps.repostinho.presentation.parseBrlToCents
 import com.mach.apps.repostinho.presentation.parseWeight
+import com.mach.apps.repostinho.presentation.sortedByNome
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -134,6 +135,16 @@ class LancamentoFormTest {
 
         assertEquals(listOf("Fulano de Tal"), LancamentoForm.semCampoNoForms(daPlanilha))
         assertTrue("Calopsita" in LancamentoForm.nomesConhecidos)
+    }
+
+    @Test
+    fun aOrdemAlfabeticaIgnoraCaixaEAcento() {
+        // "LL" é maiúsculo e viria antes de "Lameu" numa comparação por code point;
+        // "Anhê" tem acento e cairia depois de "Zé" se ele estivesse na primeira letra.
+        assertEquals(
+            listOf("Anaju", "Anhê", "Ávila", "Lameu", "LL", "Zé"),
+            listOf("LL", "Zé", "Anhê", "Lameu", "Ávila", "Anaju").sortedByNome()
+        )
     }
 
     @Test

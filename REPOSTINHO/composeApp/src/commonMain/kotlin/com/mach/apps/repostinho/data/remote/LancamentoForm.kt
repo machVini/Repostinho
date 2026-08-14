@@ -86,18 +86,14 @@ object LancamentoForm {
      * Não são pessoas e não têm campo de peso: quando a caixinha paga, o dinheiro sai dela
      * e é rateado entre quem participou. Os rótulos precisam bater exatamente com as
      * opções do Forms, senão a escolha chega em branco.
+     *
+     * Separados dos externos porque a tela agrupa os dois nas pontas da lista, com as
+     * pessoas em ordem alfabética no meio.
      */
-    val caixas = listOf(
-        "Caix. Déb/PIX",
-        "Caix. Crédito",
-        "Caix. Dinheiro",
-        "Ext. (PIX)",
-        "Ext. (Dinheiro)"
-    )
+    val caixasDaRep = listOf("Caix. Déb/PIX", "Caix. Crédito", "Caix. Dinheiro")
 
-    /** Todas as opções de pagador, na ordem em que o Forms as lista. */
-    val pagadores: List<String>
-        get() = caixas.take(3) + PESO_POR_NOME.keys + caixas.drop(3)
+    /** Quem pagou de fora da rep. */
+    val caixasExternos = listOf("Ext. (PIX)", "Ext. (Dinheiro)")
 
     /**
      * Nomes que a planilha tem e o Forms não.
