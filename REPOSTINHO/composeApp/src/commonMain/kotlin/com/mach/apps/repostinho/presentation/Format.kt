@@ -47,6 +47,43 @@ fun parseBrlToCents(input: String): Long? {
     return (value * 100).roundToLong()
 }
 
+/*
+ * Acentos que aparecem em português, dobrados para a letra sem acento.
+ *
+ * Escrito à mão porque o Kotlin comum não tem `Normalizer` e o alvo iOS não tem
+ * `java.text` — é a mesma razão de os nomes de mês estarem logo abaixo.
+ */
+private val SEM_ACENTO = mapOf(
+    'á' to 'a', 'à' to 'a', 'â' to 'a', 'ã' to 'a', 'ä' to 'a',
+    'é' to 'e', 'è' to 'e', 'ê' to 'e', 'ë' to 'e',
+    'í' to 'i', 'ì' to 'i', 'î' to 'i', 'ï' to 'i',
+    'ó' to 'o', 'ò' to 'o', 'ô' to 'o', 'õ' to 'o', 'ö' to 'o',
+    'ú' to 'u', 'ù' to 'u', 'û' to 'u', 'ü' to 'u',
+    'ç' to 'c'
+)
+
+/**
+ * Ordem alfabética de gente, ignorando acento e caixa.
+ *
+ * `sorted()` compara code points, e isso não é a ordem que alguém procura numa lista:
+ * "LL" viria antes de "Lameu" só por ser maiúsculo, e um nome acentuado cairia depois
+ * do Z se o acento estivesse na primeira letra.
+ */
+fun List<String>.sortedByNome(): List<String> = sortedBy { name ->
+    buildString { name.lowercase().forEach { append(SEM_ACENTO[it] ?: it) } }
+}
+
+/**
+ * Lê um peso digitado pelo morador. Aceita "1", "0,5" e "0.5".
+ *
+ * A vírgula é o que o teclado brasileiro oferece, mas o formulário do banco só entende
+ * ponto — a conversão tem que acontecer aqui, não na cabeça de quem digita.
+ */
+fun parseWeight(input: String): Double? {
+    val value = input.trim().replace(',', '.').toDoubleOrNull() ?: return null
+    return if (value > 0.0) value else null
+}
+
 /**
  * Peso de rateio: "1", "0,88", "14,24".
  *

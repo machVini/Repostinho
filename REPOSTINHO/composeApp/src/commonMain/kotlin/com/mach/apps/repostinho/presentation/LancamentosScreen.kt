@@ -9,10 +9,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -29,15 +31,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mach.apps.repostinho.data.model.Movement
 import com.mach.apps.repostinho.data.model.MovementType
+import com.mach.apps.repostinho.ui.MenuMaxHeight
 import com.mach.apps.repostinho.ui.RepIcons
 import com.mach.apps.repostinho.ui.accentColor
 import com.mach.apps.repostinho.ui.positiveColor
+import com.mach.apps.repostinho.ui.rememberMenuToggle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,7 +55,11 @@ fun LancamentosScreen(
     // null = sem filtro. É o único estado que não corresponde a um morador de verdade,
     // então não pode ser um nome vazio — colidiria se algum dia existisse um assim.
     var filterName by remember { mutableStateOf<String?>(null) }
-    var menuExpanded by remember { mutableStateOf(false) }
+    val menu = rememberMenuToggle()
+    var lancando by remember { mutableStateOf(false) }
+
+    // O lançamento sai daqui para o Forms, que é quem de fato escreve na planilha.
+    val uriHandler = LocalUriHandler.current
 
     val filtered = remember(movements, filterName) {
         filterName?.let { name -> movements.filter { it.involves(name) } } ?: movements
@@ -58,7 +67,11 @@ fun LancamentosScreen(
     // Mais recente primeiro: na planilha os lançamentos são acrescentados no fim.
     val ordered = filtered.asReversed()
 
-    val otherNames = residentNames.filter { it != currentMemberName }
+    // A planilha entrega os nomes na ordem das colunas dela, que não ajuda quem procura
+    // alguém numa lista de 25.
+    val otherNames = remember(residentNames, currentMemberName) {
+        residentNames.filter { it != currentMemberName }.sortedByNome()
+    }
 
     LazyColumn(modifier = modifier.fillMaxWidth()) {
         item {
@@ -98,25 +111,29 @@ fun LancamentosScreen(
                             val isOther = filterName != null && filterName != currentMemberName
                             FilterChip(
                                 selected = isOther,
-                                onClick = { menuExpanded = true },
+                                onClick = { menu.onAnchorClick() },
                                 label = { Text(if (isOther) filterName!! else "Morador…") },
                                 trailingIcon = {
                                     Icon(
-                                        imageVector = RepIcons.ExpandMore,
-                                        contentDescription = "Escolher morador"
+                                        imageVector = if (menu.expanded) RepIcons.ExpandLess
+                                        else RepIcons.ExpandMore,
+                                        contentDescription = if (menu.expanded) "Fechar a lista"
+                                        else "Escolher morador"
                                     )
                                 }
                             )
                             DropdownMenu(
-                                expanded = menuExpanded,
-                                onDismissRequest = { menuExpanded = false }
+                                expanded = menu.expanded,
+                                onDismissRequest = { menu.dismiss() },
+                                // Sem limite, 25 nomes cobrem a lista de lançamentos toda.
+                                modifier = Modifier.heightIn(max = MenuMaxHeight)
                             ) {
                                 otherNames.forEach { name ->
                                     DropdownMenuItem(
                                         text = { Text(name) },
                                         onClick = {
                                             filterName = name
-                                            menuExpanded = false
+                                            menu.select()
                                         }
                                     )
                                 }
@@ -124,6 +141,15 @@ fun LancamentosScreen(
                         }
                     }
                 }
+            }
+        }
+
+        item {
+            Button(
+                onClick = { lancando = true },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+            ) {
+                Text("Novo lançamento")
             }
         }
 
@@ -147,12 +173,22 @@ fun LancamentosScreen(
 
         item {
             Text(
-                text = "Os lançamentos continuam sendo feitos na planilha — o app só mostra.",
+                text = "Quem grava o lançamento é o formulário, não o app — a planilha " +
+                    "segue sendo a fonte da verdade.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 16.dp)
             )
         }
+    }
+
+    if (lancando) {
+        LancamentoDialog(
+            participants = residentNames,
+            currentMemberName = currentMemberName,
+            onDismiss = { lancando = false },
+            onOpenForm = { uriHandler.openUri(it) }
+        )
     }
 }
 

@@ -14,7 +14,7 @@ import * as XLSX from "xlsx";
 const CACHE_SECONDS = 300;
 
 /** Suba isto quando a forma da resposta mudar; invalida o cache de borda. */
-const CACHE_VERSION = "2";
+const CACHE_VERSION = "3";
 
 /** Quantas atas o card da Home mostra. */
 const ATAS_COUNT = 3;

@@ -42,6 +42,7 @@ import com.mach.apps.repostinho.data.model.RepDate
 import com.mach.apps.repostinho.data.model.RepEvent
 import com.mach.apps.repostinho.ui.RepIcons
 import com.mach.apps.repostinho.ui.accentColor
+import com.mach.apps.repostinho.ui.dismissKeyboardOnTap
 import com.mach.apps.repostinho.ui.eventCategoryColor
 
 @Composable
@@ -300,7 +301,7 @@ private fun AddEventDialog(
         onDismissRequest = onDismiss,
         title = { Text("Novo evento") },
         text = {
-            Column {
+            Column(modifier = Modifier.dismissKeyboardOnTap()) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
