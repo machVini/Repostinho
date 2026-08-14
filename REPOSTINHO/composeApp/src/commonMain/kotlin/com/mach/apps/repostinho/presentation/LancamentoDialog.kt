@@ -38,9 +38,11 @@ import androidx.compose.ui.unit.dp
 import com.mach.apps.repostinho.data.model.MovementType
 import com.mach.apps.repostinho.data.remote.LancamentoDraft
 import com.mach.apps.repostinho.data.remote.LancamentoForm
+import com.mach.apps.repostinho.ui.MenuMaxHeight
 import com.mach.apps.repostinho.ui.RepIcons
 import com.mach.apps.repostinho.ui.accentColor
 import com.mach.apps.repostinho.ui.dismissKeyboardOnTap
+import com.mach.apps.repostinho.ui.rememberMenuToggle
 
 /**
  * Monta um lançamento e abre o formulário do banco já preenchido.
@@ -287,11 +289,11 @@ private fun Seletor(
     onSelect: (String) -> Unit,
     enabled: Boolean = true
 ) {
-    var aberto by remember { mutableStateOf(false) }
+    val menu = rememberMenuToggle()
 
     Box(modifier = Modifier.fillMaxWidth()) {
         OutlinedButton(
-            onClick = { aberto = true },
+            onClick = { menu.onAnchorClick() },
             enabled = enabled,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -300,15 +302,25 @@ private fun Seletor(
                 modifier = Modifier.weight(1f),
                 color = if (enabled) accentColor() else MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Icon(RepIcons.ExpandMore, contentDescription = null)
+            // A seta vira para cima quando aberto: é ela que o morador toca para fechar.
+            Icon(
+                imageVector = if (menu.expanded) RepIcons.ExpandLess else RepIcons.ExpandMore,
+                contentDescription = if (menu.expanded) "Fechar a lista" else "Abrir a lista"
+            )
         }
-        DropdownMenu(expanded = aberto, onDismissRequest = { aberto = false }) {
+        DropdownMenu(
+            expanded = menu.expanded,
+            onDismissRequest = { menu.dismiss() },
+            // Com 31 pagadores, o menu sem limite cobre a tela inteira e esconde o
+            // formulário atrás dele.
+            modifier = Modifier.heightIn(max = MenuMaxHeight)
+        ) {
             opcoes.forEach { opcao ->
                 DropdownMenuItem(
                     text = { Text(opcao) },
                     onClick = {
                         onSelect(opcao)
-                        aberto = false
+                        menu.select()
                     }
                 )
             }
