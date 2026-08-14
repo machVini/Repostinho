@@ -50,6 +50,17 @@ val generateBankApiConfig by tasks.registering {
     }
 }
 
+/*
+ * O plugin do Google só entra se o `google-services.json` existir.
+ *
+ * Ele é gitignored — o repositório é público —, e sem esta guarda um clone limpo falharia
+ * no build em vez de subir com o login desligado.
+ */
+val firebaseConfigurado = file("google-services.json").exists()
+if (firebaseConfigurado) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 kotlin {
     androidTarget {
         compilerOptions {
@@ -87,6 +98,7 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.coil.compose)
             implementation(libs.coil.networkKtor)
+            implementation(libs.firebase.auth)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)

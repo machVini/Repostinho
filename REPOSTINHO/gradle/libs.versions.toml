@@ -21,8 +21,10 @@ ktor = "2.3.12"
 kotlinxDatetime = "0.7.1"
 # Carrega a foto do morador por URL nos dois alvos.
 coil = "3.3.0"
-# Firebase Multiplatform (GitLive)
-firebase-kotlin = "1.10.4"
+# Firebase pelo GitLive. A 2.x é feita contra o Firebase iOS 11.x, que é o que o
+# projeto Xcode linka — a 1.10 era contra a 10.x e o skew ficava por conta do build.
+firebase-kotlin = "2.4.0"
+googleServices = "4.4.2"
 # Ciclo de vida e ViewModels no KMP
 viewmodel = "2.8.0"
 
@@ -53,6 +55,7 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 # Variante para Ktor 2: a de Ktor 3 arrasta o cliente inteiro do app para a major nova.
 coil-networkKtor = { module = "io.coil-kt.coil3:coil-network-ktor2", version.ref = "coil" }
+firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "firebase-kotlin" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -61,3 +64,4 @@ composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMul
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+googleServices = { id = "com.google.gms.google-services", version.ref = "googleServices" }

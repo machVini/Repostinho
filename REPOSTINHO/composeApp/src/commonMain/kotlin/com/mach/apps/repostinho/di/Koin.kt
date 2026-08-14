@@ -10,8 +10,8 @@ import com.mach.apps.repostinho.data.local.ThemePreferenceStore
 import com.mach.apps.repostinho.data.local.textFileStore
 import com.mach.apps.repostinho.data.repository.AuthProvider
 import com.mach.apps.repostinho.data.repository.AuthRepository
+import com.mach.apps.repostinho.data.repository.FirebaseAuthProvider
 import com.mach.apps.repostinho.data.repository.BankSheetRepository
-import com.mach.apps.repostinho.data.repository.NoopAuthProvider
 import com.mach.apps.repostinho.data.repository.ResidentAuthRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
 import com.mach.apps.repostinho.data.repository.EventRepository
@@ -66,7 +66,7 @@ fun appModule(cacheDirectory: String) = module {
     // Quem entra no app. O provedor é a única peça que o Firebase substitui — o resto
     // do login (casar com o morador, guardar a sessão) não muda com ele.
     single { SessionStore(textFileStore(cacheDirectory)) }
-    single<AuthProvider> { NoopAuthProvider() }
+    single<AuthProvider> { FirebaseAuthProvider() }
     single<AuthRepository> { ResidentAuthRepository(get(), get(), get()) }
 
     // ViewModel (no KMP usamos o Compose ViewModel ou bibliotecas como Voyager/Decompose)

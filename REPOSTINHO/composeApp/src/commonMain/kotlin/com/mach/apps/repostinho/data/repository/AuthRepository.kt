@@ -36,10 +36,9 @@ interface AuthRepository {
 /**
  * Autenticação em duas etapas, de propósito.
  *
- * A primeira prova que o email é de quem está digitando — hoje isso é encenado, e vira o
- * Firebase Auth quando o projeto existir. A segunda pergunta se aquele email pertence a
- * um morador, e essa é nossa: um provedor de autenticação diz que você é você, nunca que
- * você mora na rep.
+ * A primeira prova que o email é de quem está digitando — é o Firebase Auth. A segunda
+ * pergunta se aquele email pertence a um morador, e essa é nossa: um provedor de
+ * autenticação diz que você é você, nunca que você mora na rep.
  *
  * Por isso a lista de moradores é a lista de permitidos, e o `email` vazio é o que impede
  * alguém de entrar sem ter sido cadastrado.
@@ -85,28 +84,11 @@ class SignInException(val error: SignInError) : Exception()
 /**
  * Quem prova que o email é de quem está digitando.
  *
- * Existe como interface porque é a única peça que o Firebase vai substituir: o resto do
- * login — casar com o morador, guardar a sessão, abrir o app — não muda com o provedor.
+ * É interface porque é a única peça presa a um fornecedor: o resto do login — casar com
+ * o morador, guardar a sessão, abrir o app — não muda se o Firebase sair um dia.
  */
 interface AuthProvider {
     suspend fun authenticate(email: String, password: String): Result<Unit>
     suspend fun signOut()
 }
 
-/**
- * Provedor de mentira, enquanto o projeto no Firebase não existe.
- *
- * Aceita qualquer senha. **Isto não é autenticação** — serve para exercitar a tela, a
- * sessão e o casamento com o morador antes de o Firebase entrar. Trocar por ele é
- * implementar esta interface e mudar uma linha no Koin.
- */
-class NoopAuthProvider : AuthProvider {
-    override suspend fun authenticate(email: String, password: String): Result<Unit> =
-        if (email.isBlank()) {
-            Result.failure(SignInException(SignInError.InvalidCredentials))
-        } else {
-            Result.success(Unit)
-        }
-
-    override suspend fun signOut() = Unit
-}
