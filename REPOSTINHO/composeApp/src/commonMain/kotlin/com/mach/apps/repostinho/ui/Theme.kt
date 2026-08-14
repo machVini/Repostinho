@@ -178,6 +178,40 @@ fun accentColor(): Color =
 fun onBarIndicatorColor(): Color = MaterialTheme.colorScheme.onSecondaryContainer
 
 /*
+ * A tela de login é a única com fundo colorido de ponta a ponta.
+ *
+ * Ela não tem barra, nem card, nem conteúdo da rep — é só a marca e dois campos. Por isso
+ * as cores dela ficam aqui e não saem do `colorScheme`: o azul do app é o das barras, e
+ * ocupando a tela inteira ele fica pesado demais atrás de um formulário.
+ */
+
+/** Azul mais suave que o das barras, para o fundo não competir com os campos. */
+private val LoginBlue = Color(0xFF3D82DE)
+
+@Composable
+fun loginBackgroundColor(): Color =
+    if (LocalDarkTheme.current) MaterialTheme.colorScheme.background else LoginBlue
+
+/**
+ * O botão de entrar: amarelo no claro, ouro velho no escuro.
+ *
+ * Segue a mesma regra do resto do app — o ouro do brasão vira néon sobre fundo escuro, e
+ * o tom dessaturado do tema escuro é o que continua lendo como amarelo sem cansar.
+ */
+@Composable
+fun loginButtonColor(): Color =
+    if (LocalDarkTheme.current) MaterialTheme.colorScheme.secondary else RepYellow
+
+/** Texto sobre o botão: escuro nos dois temas, porque os dois fundos são claros. */
+@Composable
+fun onLoginButtonColor(): Color =
+    if (LocalDarkTheme.current) MaterialTheme.colorScheme.onSecondary else RepBronze
+
+/** Sobre o azul e sobre o azul-noite, o branco é o que lê nos dois. */
+@Composable
+fun onLoginBackgroundColor(): Color = Color.White
+
+/*
  * Cores das categorias da agenda.
  *
  * São dois tons por categoria porque os cards mudam de fundo com o tema: no claro eles são

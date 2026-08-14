@@ -107,13 +107,6 @@ class RemoteEventRepository(
                 isHighlight = true
             ),
             RepEvent(
-                id = "niver-vk",
-                name = "Aniversário do VK",
-                start = RepDate(20, 2, 2001),
-                category = EventCategory.ANIVERSARIO,
-                recurrence = Recurrence.ANUAL
-            ),
-            RepEvent(
                 id = "lei-do-retorno",
                 name = "Lei do Retorno",
                 start = RepDate(15, 8, 2026),
@@ -137,90 +130,6 @@ class RemoteEventRepository(
                 start = RepDate(19, 11, 2026),
                 end = RepDate(22, 11, 2026),
                 category = EventCategory.ARU
-            ),
-            RepEvent(
-                id = "niver-leozy",
-                name = "Aniversário do Leozy",
-                start = RepDate(11, 1, 2003),
-                category = EventCategory.ANIVERSARIO,
-                recurrence = Recurrence.ANUAL
-            ),
-            RepEvent(
-                id = "niver-gab",
-                name = "Aniversário do Gab",
-                start = RepDate(11, 1, 2001),
-                category = EventCategory.ANIVERSARIO,
-                recurrence = Recurrence.ANUAL
-            ),
-            RepEvent(
-                id = "niver-peter",
-                name = "Aniversário do Peter",
-                start = RepDate(24, 2, 2003),
-                category = EventCategory.ANIVERSARIO,
-                recurrence = Recurrence.ANUAL
-            ),
-            RepEvent(
-                id = "niver-prazer",
-                name = "Aniversário do Prazer",
-                start = RepDate(6, 3, 2008),
-                category = EventCategory.ANIVERSARIO,
-                recurrence = Recurrence.ANUAL
-            ),
-            RepEvent(
-                id = "niver-tz",
-                name = "Aniversário do TZ",
-                start = RepDate(2, 8, 2008),
-                category = EventCategory.ANIVERSARIO,
-                recurrence = Recurrence.ANUAL
-            ),
-            RepEvent(
-                id = "niver-cansado",
-                name = "Aniversário do Cansado",
-                start = RepDate(31, 8, 2002),
-                category = EventCategory.ANIVERSARIO,
-                recurrence = Recurrence.ANUAL
-            ),
-            RepEvent(
-                id = "niver-mn",
-                name = "Aniversário do Mais Novo",
-                start = RepDate(17, 9, 2006),
-                category = EventCategory.ANIVERSARIO,
-                recurrence = Recurrence.ANUAL
-            ),
-            RepEvent(
-                id = "niver-gu",
-                name = "Aniversário do Gu",
-                start = RepDate(22, 10, 2003),
-                category = EventCategory.ANIVERSARIO,
-                recurrence = Recurrence.ANUAL
-            ),
-            RepEvent(
-                id = "niver-pico",
-                name = "Aniversário do Pico",
-                start = RepDate(28, 10, 2000),
-                category = EventCategory.ANIVERSARIO,
-                recurrence = Recurrence.ANUAL
-            ),
-            RepEvent(
-                id = "niver-mixas",
-                name = "Aniversário do Mixas",
-                start = RepDate(10, 11, 2007),
-                category = EventCategory.ANIVERSARIO,
-                recurrence = Recurrence.ANUAL
-            ),
-            RepEvent(
-                id = "niver-lameu",
-                name = "Aniversário do Lameu",
-                start = RepDate(20, 11, 2003),
-                category = EventCategory.ANIVERSARIO,
-                recurrence = Recurrence.ANUAL
-            ),
-            RepEvent(
-                id = "niver-ll",
-                name = "Aniversário do LL",
-                start = RepDate(29, 12, 1999),
-                category = EventCategory.ANIVERSARIO,
-                recurrence = Recurrence.ANUAL
             ),
         )
     }

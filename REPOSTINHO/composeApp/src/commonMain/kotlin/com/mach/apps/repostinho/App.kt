@@ -27,18 +27,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mach.apps.repostinho.data.remote.AuthTokenProvider
 import com.mach.apps.repostinho.data.local.ThemeMode
 import com.mach.apps.repostinho.data.local.ThemePreferenceStore
 import com.mach.apps.repostinho.presentation.BancoScreen
 import com.mach.apps.repostinho.presentation.CalendarioScreen
 import com.mach.apps.repostinho.presentation.DashboardViewModel
 import com.mach.apps.repostinho.presentation.HomeScreen
+import com.mach.apps.repostinho.presentation.LoginScreen
+import com.mach.apps.repostinho.presentation.LoginViewModel
 import com.mach.apps.repostinho.presentation.PerfilScreen
-import com.mach.apps.repostinho.presentation.SheetUiState
 import com.mach.apps.repostinho.presentation.TarefasScreen
 import com.mach.apps.repostinho.ui.AutoSizeLabel
 import com.mach.apps.repostinho.ui.RepIcons
+import coil3.compose.setSingletonImageLoaderFactory
 import com.mach.apps.repostinho.ui.RepostinhoTheme
+import com.mach.apps.repostinho.ui.repImageLoader
 import com.mach.apps.repostinho.ui.barContainerColor
 import com.mach.apps.repostinho.ui.barIndicatorColor
 import com.mach.apps.repostinho.ui.onBarColor
@@ -59,6 +63,11 @@ private enum class AppTab(val label: String, val title: String, val icon: ImageV
 fun App() {
     // KoinContext por fora do tema: a preferência salva precisa ser lida antes de decidir
     // a cor, e quem a guarda vem da injeção.
+    // O Coil precisa do token para buscar a foto do morador no banco-api; sem isto toda
+    // foto volta 401 e o perfil mostra o monograma como se ninguém tivesse foto.
+    val tokens = koinInject<AuthTokenProvider>()
+    setSingletonImageLoaderFactory { context -> repImageLoader(context, tokens) }
+
     KoinContext {
         val themeStore = koinInject<ThemePreferenceStore>()
         val systemDark = isSystemInDarkTheme()
@@ -69,6 +78,25 @@ fun App() {
         val darkTheme = themeMode.isDark(systemDark)
 
         RepostinhoTheme(darkTheme = darkTheme) {
+            val loginViewModel = koinInject<LoginViewModel>()
+            val residentId by loginViewModel.currentResidentId.collectAsStateWithLifecycle()
+            val login by loginViewModel.uiState.collectAsStateWithLifecycle()
+
+            // Sem sessão, o app é a tela de login e mais nada: o resto depende de saber de
+            // quem é o saldo e a tarefa, e mostrar isso "de alguém" não faz sentido.
+            if (residentId == null) {
+                LoginScreen(
+                    email = login.email,
+                    password = login.password,
+                    isBusy = login.isBusy,
+                    error = login.error,
+                    onEmail = loginViewModel::onEmail,
+                    onPassword = loginViewModel::onPassword,
+                    onSignIn = loginViewModel::signIn
+                )
+                return@RepostinhoTheme
+            }
+
             val viewModel = koinInject<DashboardViewModel>()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             val sheet by viewModel.sheet.collectAsStateWithLifecycle()
@@ -205,7 +233,7 @@ fun App() {
                             balances = sheet.balances,
                             movements = sheet.movements,
                             caixinha = sheet.caixinha,
-                            currentMemberName = SheetUiState.CURRENT_MEMBER_NAME,
+                            currentMemberName = sheet.currentMemberName,
                             syncState = sheet.syncState,
                             isRefreshing = sheet.isRefreshing,
                             onRefresh = { viewModel.refreshSheet(fresh = true) },
@@ -236,6 +264,7 @@ fun App() {
                             state = state,
                             myBalanceCents = sheet.myBalanceCents,
                             tasks = tasks,
+                            onSignOut = loginViewModel::signOut,
                             modifier = inset
                         )
                     }

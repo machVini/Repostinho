@@ -17,3 +17,9 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+
+# Configuração do Firebase: fica fora pela mesma razão do local.properties — o repositório
+# é público, e commitar isso deixa qualquer um tentar login contra o projeto da rep.
+# O build funciona sem eles: o Firebase entra desligado e o app cai no provedor local.
+google-services.json
+GoogleService-Info.plist

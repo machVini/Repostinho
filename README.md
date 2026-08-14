@@ -144,6 +144,25 @@ silently doing nothing was a real bug. `fresh: Boolean` threads from the UI gest
 through the repository and `BankApi` to a `?fresh=1` query param the Worker uses to
 bypass its own cache.
 
+**Sign-in is Firebase Auth with email and password**, not a magic link. The link flow has
+to return to the app, which on iOS means universal links, which need the Associated
+Domains entitlement — and personal (free) Apple developer teams don't support it. A
+password needs no deep link at all. Accounts are created by hand in the Firebase console;
+the app never signs anyone up, so "only residents get in" holds at the provider before
+the app's own allowlist check even runs.
+
+That allowlist check still exists, and it is the point: authenticating proves an email is
+yours, never that you live here. A resident's `email` field is what maps the account to a
+person — and to a balance, a chore, a photo.
+
+**Firebase config is gitignored too.** `google-services.json` and
+`GoogleService-Info.plist` identify the Firebase project used for sign-in. Google
+considers them non-secret — they ship inside the app binary either way, and security
+comes from Firebase's own rules rather than from hiding the file. But this repository is
+public, and committing them lets anyone aim sign-in attempts at the house's project for
+free. They sit beside `local.properties` in `.gitignore`; without them the app builds
+with sign-in disabled rather than failing, so a fresh clone still runs.
+
 **Secrets never enter the repository.** The API base URL and bearer token live in a
 gitignored `local.properties`; a Gradle task generates a small `BankApiConfig.kt` at
 build time and injects it into `commonMain`'s source set. With the file absent, the app

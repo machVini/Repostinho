@@ -128,6 +128,52 @@ Não tem TTL, ao contrário das tarefas: um evento vale até alguém apagar. Usa
 namespace KV das tarefas, em outra chave — são duas listas pequenas do mesmo app, e um
 namespace por chave só multiplicaria configuração.
 
+`GET /moradores` e `POST /moradores` guardam quem mora na rep, com foto, aniversário e
+data de entrada:
+
+```json
+{ "residents": [ { "id": "vk", "name": "VK", "roomType": "DUPLO_MAIOR",
+                   "isModerator": false, "isActive": true,
+                   "birthDay": 20, "birthMonth": 2,
+                   "joinedAt": "28/03/2026",
+                   "photoUrl": "https://banco.<sub>.workers.dev/foto/vk" } ] }
+```
+
+O `POST` grava a **lista inteira** de uma vez — são quinze pessoas que mudam duas vezes
+por ano, e mandar tudo evita a pergunta de o que fazer com quem sumiu da lista.
+
+O app traz uma cópia embutida para a primeira abertura sem rede. Resposta vazia **não é
+adotada**: sem morador nenhum o app fica sem nome, sem escala e sem saldo próprio, o que é
+pior do que uma lista velha.
+
+O aniversário é `birthDay` + `birthMonth`, sem ano. É daqui que o Calendário monta os
+aniversários — eles não são eventos cadastrados. Enquanto foram as duas coisas, a mesma
+data existia em dois lugares e a segunda ficava velha na primeira troca de morador.
+
+### Fotos
+
+`GET /foto/<id>` devolve a foto do morador; `PUT /foto/<id>` grava. Aceita `image/jpeg`,
+`image/png` e `image/webp`, até 2 MB:
+
+```bash
+curl -X PUT -H "x-rep-token: $TOKEN" -H 'content-type: image/jpeg' \
+  --data-binary @vk.jpg https://banco.<sub>.workers.dev/foto/vk
+```
+
+Ficam no mesmo KV, e não num bucket R2 — que seria o lugar certo para binário, mas precisa
+ser habilitado no Dashboard e costuma pedir cartão. São quinze fotos de poucos KB, lidas
+com frequência e trocadas quase nunca. Como o app só conhece a URL, migrar para R2 depois
+não encosta no Kotlin.
+
+São servidas **pelo Worker**, atrás do mesmo token do resto, e não por uma URL pública:
+foto de gente num endereço aberto e adivinhável (`.../vk.jpg`) seria a única coisa do app
+exposta a quem passasse por ali. O app manda o token nessas requisições configurando o
+carregador de imagens; sem isso toda foto voltaria 401 e o perfil mostraria o monograma
+como se ninguém tivesse foto.
+
+O limite de 2 MB é menor que o do KV de propósito: foto de celular sem redimensionar passa
+de 5 MB e o app baixaria isso a cada perfil aberto.
+
 ### A pasta precisa estar aberta por link
 
 Uma chave de API do Google só enxerga o que está compartilhado como "qualquer pessoa com

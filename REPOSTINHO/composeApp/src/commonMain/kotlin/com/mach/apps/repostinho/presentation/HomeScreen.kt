@@ -76,7 +76,7 @@ private fun HomeContent(
     onGoToTarefas: () -> Unit
 ) {
     LazyColumn(modifier = Modifier.fillMaxWidth()) {
-        item { Greeting() }
+        item { Greeting(sheet.currentMemberName) }
 
         item { MyBalanceCard(sheet, onGoToBanco) }
         item { MyTaskCard(myTask, tasks, onGoToTarefas) }
@@ -92,14 +92,14 @@ private fun HomeContent(
  * estreito quem cede é o nome, não a marca.
  */
 @Composable
-private fun Greeting() {
+private fun Greeting(memberName: String) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Olá, ${SheetUiState.CURRENT_MEMBER_NAME}",
+                text = "Olá, $memberName",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )

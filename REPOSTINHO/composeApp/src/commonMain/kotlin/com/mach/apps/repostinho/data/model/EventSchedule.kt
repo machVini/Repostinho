@@ -18,6 +18,26 @@ object EventSchedule {
      * Um evento de vários dias entra se ele ainda não terminou: o InterReps continua na
      * lista durante os quatro dias em que está acontecendo, e não some no primeiro.
      */
+    /**
+     * Os aniversários dos moradores, como eventos anuais.
+     *
+     * Derivados, e não cadastrados: enquanto foram eventos escritos à mão, a mesma data
+     * existia no morador e na agenda, e a segunda ficaria velha na primeira troca de
+     * gente. Quem sai da rep deixa de ter aniversário na agenda sozinho.
+     */
+    fun birthdaysOf(residents: List<Resident>): List<RepEvent> = residents
+        .filter { it.isActive && it.birthDay != null && it.birthMonth != null }
+        .map { resident ->
+            RepEvent(
+                id = "niver-${resident.id}",
+                name = "Aniversário do ${resident.name}",
+                // O ano não importa num evento anual: só dia e mês são lidos.
+                start = RepDate(resident.birthDay!!, resident.birthMonth!!, 2000),
+                category = EventCategory.ANIVERSARIO,
+                recurrence = Recurrence.ANUAL
+            )
+        }
+
     fun occurrencesUntilEndOfYear(
         events: List<RepEvent>,
         today: RepDate

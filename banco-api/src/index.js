@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { verificarTokenFirebase, tokenDoCabecalho } from "./auth.js";
 
 /*
  * Converte a planilha do banco da rep em JSON para o app.
@@ -52,6 +53,44 @@ const TAREFAS_TTL_SECONDS = 60 * 24 * 60 * 60;
  * chave só multiplicaria configuração.
  */
 const EVENTOS_KEY = "eventos:v1";
+
+/**
+ * Onde ficam os moradores.
+ *
+ * Saíram do código do app para cá porque foto, aniversário e data de entrada mudam sem
+ * que ninguém queira publicar versão nova só por isso.
+ */
+const MORADORES_KEY = "moradores:v1";
+
+/**
+ * Prefixo das fotos dos moradores no KV.
+ *
+ * O lugar certo para binário seria o R2, mas ele precisa ser habilitado no Dashboard e
+ * costuma pedir cartão. São quinze fotos de poucos KB, lidas o tempo todo e trocadas
+ * quase nunca — cabem aqui sem drama. O app só conhece a URL, então mudar para R2 depois
+ * não encosta no Kotlin.
+ */
+const FOTOS_PREFIX = "foto:v1";
+
+/**
+ * Teto por foto.
+ *
+ * O KV aceita 25 MiB, mas uma foto de celular sem redimensionar chega a 5 MB e o app
+ * baixaria isso a cada perfil aberto. Recusar na entrada é mais gentil do que descobrir
+ * pela conta de banda.
+ */
+const FOTO_MAX_BYTES = 2 * 1024 * 1024;
+
+const FOTO_TIPOS = ["image/jpeg", "image/png", "image/webp"];
+
+/** Os tipos de quarto que o app sabe desenhar. */
+const ROOM_TYPES = [
+  "INDIVIDUAL",
+  "DUPLO_MAIOR",
+  "DUPLO_MENOR",
+  "TRIPLO_MAIOR",
+  "TRIPLO_MENOR",
+];
 
 /** O que o app sabe desenhar. Categoria desconhecida vira ROLE em vez de derrubar a tela. */
 const EVENT_CATEGORIES = ["ANIVERSARIO", "REP", "ROLE", "ARU"];
@@ -500,6 +539,160 @@ function eventosResponse(events) {
 }
 
 /**
+ * A foto de um morador: `/foto/<id>`.
+ *
+ * Servida pelo Worker, e não por um bucket público, para ficar atrás do mesmo token do
+ * resto. Foto de gente numa URL pública e adivinhável (`.../vk.jpg`) seria a única coisa
+ * do app aberta para quem passasse por ali.
+ */
+async function handleFoto(request, env, id) {
+  if (!env.TAREFAS) {
+    return json({ error: "KV TAREFAS não configurado" }, 500);
+  }
+  if (!id) return json({ error: "faltou o id do morador" }, 400);
+
+  const key = `${FOTOS_PREFIX}:${id}`;
+
+  if (request.method === "GET") {
+    const { value, metadata } = await env.TAREFAS.getWithMetadata(key, {
+      type: "arrayBuffer",
+    });
+    if (!value) return json({ error: "sem foto" }, 404);
+
+    return new Response(value, {
+      headers: {
+        "content-type": metadata?.contentType ?? "image/jpeg",
+        // Sem cache: trocar a foto e continuar vendo a antiga é a primeira reclamação, e
+        // são quinze imagens pequenas pedidas por uma tela só. Se um dia pesar, o
+        // caminho é versionar a URL em vez de voltar a cachear às cegas.
+        "cache-control": "no-store",
+      },
+    });
+  }
+
+  if (request.method !== "PUT") {
+    return json({ error: "method not allowed" }, 405);
+  }
+
+  const contentType = (request.headers.get("content-type") ?? "").split(";")[0].trim();
+  if (!FOTO_TIPOS.includes(contentType)) {
+    return json({ error: `content-type deve ser um de ${FOTO_TIPOS.join(", ")}` }, 415);
+  }
+
+  const bytes = await request.arrayBuffer();
+  if (bytes.byteLength === 0) return json({ error: "corpo vazio" }, 400);
+  if (bytes.byteLength > FOTO_MAX_BYTES) {
+    return json(
+      { error: `foto tem ${bytes.byteLength} bytes; o limite é ${FOTO_MAX_BYTES}` },
+      413
+    );
+  }
+
+  await env.TAREFAS.put(key, bytes, { metadata: { contentType } });
+  return json({ id, bytes: bytes.byteLength, contentType }, 200);
+}
+
+/**
+ * Os moradores da rep.
+ *
+ * O app traz uma lista embutida para a primeira abertura sem rede; esta é a que manda
+ * quando existe. `POST` grava a lista inteira de uma vez — são 15 pessoas que mudam
+ * duas vezes por ano, e mandar tudo evita a pergunta de o que fazer com quem sumiu.
+ */
+async function handleMoradores(request, env) {
+  if (!env.TAREFAS) {
+    return json({ error: "KV TAREFAS não configurado" }, 500);
+  }
+
+  if (request.method === "GET") {
+    return moradoresResponse(await readMoradores(env));
+  }
+
+  if (request.method !== "POST") {
+    return json({ error: "method not allowed" }, 405);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "corpo não é JSON" }, 400);
+  }
+
+  if (!Array.isArray(body?.residents)) {
+    return json({ error: "residents deve ser uma lista" }, 400);
+  }
+
+  const residents = body.residents.map(validResident).filter(Boolean);
+  if (residents.length !== body.residents.length) {
+    return json({ error: "algum morador está inválido" }, 400);
+  }
+
+  await env.TAREFAS.put(MORADORES_KEY, JSON.stringify(residents));
+  return moradoresResponse(residents);
+}
+
+async function readMoradores(env) {
+  const raw = await env.TAREFAS.get(MORADORES_KEY, { type: "json" });
+  if (!Array.isArray(raw)) return [];
+  return raw.map(validResident).filter(Boolean);
+}
+
+/**
+ * Aceita só o que o app consegue desenhar.
+ *
+ * Campo torto aqui viraria exceção de desserialização no Kotlin, e o app abriria sem
+ * morador nenhum — sem nome, sem tarefa, sem saldo próprio.
+ */
+function validResident(raw) {
+  if (!raw || typeof raw !== "object") return null;
+
+  const id = typeof raw.id === "string" ? raw.id.trim() : "";
+  const name = typeof raw.name === "string" ? raw.name.trim() : "";
+  if (!id || !name) return null;
+
+  const roomType = ROOM_TYPES.includes(raw.roomType) ? raw.roomType : "INDIVIDUAL";
+  const birthDay = intInRange(raw.birthDay, 1, 31);
+  const birthMonth = intInRange(raw.birthMonth, 1, 12);
+  const joinedMonth = intInRange(raw.joinedMonth, 1, 12);
+  const joinedYear = intInRange(raw.joinedYear, 2000, 2100);
+
+  return {
+    id,
+    name,
+    roomType,
+    isModerator: raw.isModerator === true,
+    // Ausente é morador ativo: só quem saiu é marcado, e esquecer o campo não pode
+    // apagar alguém da escala.
+    isActive: raw.isActive !== false,
+    // Dia sem mês (ou o contrário) não vira aniversário: o Calendário precisa dos dois.
+    birthDay: birthDay !== null && birthMonth !== null ? birthDay : null,
+    birthMonth: birthDay !== null && birthMonth !== null ? birthMonth : null,
+    // Mês e ano de entrada. Um sem o outro não vira nada exibível, então caem juntos.
+    joinedMonth: joinedMonth !== null && joinedYear !== null ? joinedMonth : null,
+    joinedYear: joinedMonth !== null && joinedYear !== null ? joinedYear : null,
+    photoUrl: typeof raw.photoUrl === "string" ? raw.photoUrl.trim() || null : null,
+    // Minúsculo sempre: é por ele que o login casa a conta com o morador, e "VK@x.com"
+    // e "vk@x.com" são o mesmo endereço para o provedor de autenticação.
+    email: typeof raw.email === "string"
+      ? raw.email.trim().toLowerCase() || null
+      : null,
+    // O nome dele na planilha, quando diferente. Sem isso o app procura a coluna pelo
+    // nome que exibe, não acha, e a pessoa vê saldo vazio como se não devesse nada.
+    sheetName: typeof raw.sheetName === "string" ? raw.sheetName.trim() || null : null,
+  };
+}
+
+function intInRange(value, min, max) {
+  return Number.isInteger(value) && value >= min && value <= max ? value : null;
+}
+
+/** Lista viva: cachear na borda esconderia a foto que alguém acabou de trocar. */
+function moradoresResponse(residents) {
+  return json({ residents }, 200, { "cache-control": "no-store" });
+}
+
+/**
  * Chave de cache que muda quando a resposta deveria mudar.
  *
  * `wrangler deploy` não limpa o cache de borda: uma entrada gravada antes continua sendo
@@ -539,16 +732,27 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // Token compartilhado. Isto é obstáculo, não autenticação: ele está no binário do
-    // app e pode ser extraído. Serve para o endpoint não ficar aberto a quem topar com
-    // a URL — segurança de verdade exigiria login por morador.
-    if (env.API_TOKEN && request.headers.get("x-rep-token") !== env.API_TOKEN) {
+    /*
+     * Duas credenciais, com papéis diferentes.
+     *
+     * O app manda o token do Firebase do morador logado — ele não carrega mais segredo
+     * nenhum embutido, então extrair o APK não dá acesso a nada. O `x-rep-token` deixou
+     * de viajar no binário e virou chave de administração, usada só nos cadastros por
+     * linha de comando.
+     */
+    const uid = await verificarTokenFirebase(tokenDoCabecalho(request), env.FIREBASE_PROJECT_ID);
+    const admin = env.API_TOKEN && request.headers.get("x-rep-token") === env.API_TOKEN;
+    if (!uid && !admin) {
       return json({ error: "unauthorized" }, 401);
     }
 
     if (url.pathname === "/atas") return handleAtas(request, env, ctx);
     if (url.pathname === "/tarefas") return handleTarefas(request, env);
     if (url.pathname === "/eventos") return handleEventos(request, env);
+    if (url.pathname === "/moradores") return handleMoradores(request, env);
+    if (url.pathname.startsWith("/foto/")) {
+      return handleFoto(request, env, decodeURIComponent(url.pathname.slice("/foto/".length)));
+    }
     if (url.pathname !== "/banco") {
       return json({ error: "not found" }, 404);
     }
