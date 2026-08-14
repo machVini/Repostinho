@@ -48,6 +48,17 @@ fun parseBrlToCents(input: String): Long? {
 }
 
 /**
+ * Lê um peso digitado pelo morador. Aceita "1", "0,5" e "0.5".
+ *
+ * A vírgula é o que o teclado brasileiro oferece, mas o formulário do banco só entende
+ * ponto — a conversão tem que acontecer aqui, não na cabeça de quem digita.
+ */
+fun parseWeight(input: String): Double? {
+    val value = input.trim().replace(',', '.').toDoubleOrNull() ?: return null
+    return if (value > 0.0) value else null
+}
+
+/**
  * Peso de rateio: "1", "0,88", "14,24".
  *
  * Sai sem casas quando é inteiro, porque a maioria dos lançamentos usa peso 1 e "1,00"

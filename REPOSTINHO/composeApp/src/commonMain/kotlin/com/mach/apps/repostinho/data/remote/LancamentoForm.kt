@@ -1,6 +1,7 @@
 package com.mach.apps.repostinho.data.remote
 
 import com.mach.apps.repostinho.data.model.MovementType
+import kotlin.math.roundToLong
 
 /**
  * O lançamento como o morador o preencheu na tela, antes de virar URL.
@@ -134,16 +135,29 @@ object LancamentoForm {
         MovementType.ENTRADA -> "Entrada"
     }
 
-    /** O formulário pede ponto como separador decimal, e o app guarda centavos. */
+    /**
+     * O formulário pede ponto como separador decimal, e o app guarda centavos.
+     *
+     * É pública porque a tela mostra ao morador o que vai ser enviado. Se a dica usasse
+     * uma formatação própria, ela poderia divergir do que entra na URL — e a pessoa
+     * conferiria um número que não é o que a rep vai receber.
+     */
+    fun formatValor(cents: Long): String = money(cents)
+
     private fun money(cents: Long): String {
         val sign = if (cents < 0) "-" else ""
         val abs = if (cents < 0) -cents else cents
         return "$sign${abs / 100}.${(abs % 100).toString().padStart(2, '0')}"
     }
 
-    /** Peso inteiro sai sem casas: "1" em vez de "1.0", que é o que se digita à mão. */
+    /**
+     * Peso inteiro sai sem casas: "1" em vez de "1.0", que é o que se digita à mão.
+     *
+     * `roundToLong`, e não `toLong`: truncar transformava 0,29 em 0.28, porque 0.29 * 100
+     * dá 28,999999999999996 em ponto flutuante. Peso errado vira rateio errado.
+     */
     private fun number(value: Double): String {
-        val rounded = (value * 100).toLong()
+        val rounded = (value * 100).roundToLong()
         if (rounded % 100L == 0L) return (rounded / 100L).toString()
         return "${rounded / 100L}.${(rounded % 100L).toString().padStart(2, '0').trimEnd('0')}"
     }

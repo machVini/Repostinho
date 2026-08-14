@@ -3,6 +3,8 @@ package com.mach.apps.repostinho
 import com.mach.apps.repostinho.data.model.MovementType
 import com.mach.apps.repostinho.data.remote.LancamentoDraft
 import com.mach.apps.repostinho.data.remote.LancamentoForm
+import com.mach.apps.repostinho.presentation.parseBrlToCents
+import com.mach.apps.repostinho.presentation.parseWeight
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -61,6 +63,60 @@ class LancamentoFormTest {
     fun pesoInteiroSaiSemCasas() {
         assertTrue(urlOf(weights = mapOf("VK" to 1.0)).endsWith("=1"))
         assertTrue(urlOf(weights = mapOf("VK" to 0.5)).endsWith("=0.5"))
+    }
+
+    @Test
+    fun cadaUmVaiComOSeuPeso() {
+        // O caso que motivou o campo por pessoa: rateio desigual no mesmo lançamento.
+        val url = urlOf(weights = mapOf("VK" to 2.0, "Lameu" to 1.0, "Pico" to 0.5))
+
+        assertTrue(url.contains("rb2813f7ffd7246d68e7c71db42a4bde8=2"), "VK com peso 2")
+        assertTrue(url.contains("ra0f41ddbb5a74481b1a524c194f3aae8=1"), "Lameu com peso 1")
+        assertTrue(url.contains("r29d261ed7e314031aac85a5a01181378=0.5"), "Pico com peso 0,5")
+    }
+
+    @Test
+    fun pesoQuebradoNaoPerdeUmCentesimo() {
+        // 0.29 * 100 dá 28,999999999999996 em ponto flutuante: truncar virava 0.28, e peso
+        // errado é rateio errado.
+        assertTrue(urlOf(weights = mapOf("VK" to 0.29)).endsWith("=0.29"))
+        assertTrue(urlOf(weights = mapOf("VK" to 0.88)).endsWith("=0.88"))
+    }
+
+    @Test
+    fun oValorAceitaVirgulaEPonto() {
+        // O teclado brasileiro oferece vírgula; o formulário só entende ponto.
+        assertEquals(2250L, parseBrlToCents("22,50"))
+        assertEquals(2250L, parseBrlToCents("22.50"))
+        assertEquals(123456L, parseBrlToCents("1.234,56"))
+
+        // E os três chegam ao formulário no mesmo formato.
+        assertEquals("22.50", LancamentoForm.formatValor(parseBrlToCents("22,50")!!))
+        assertEquals("1234.56", LancamentoForm.formatValor(parseBrlToCents("1.234,56")!!))
+    }
+
+    @Test
+    fun oPesoAceitaVirgulaEPonto() {
+        assertEquals(0.5, parseWeight("0,5"))
+        assertEquals(0.5, parseWeight("0.5"))
+        assertEquals(2.0, parseWeight("2"))
+    }
+
+    @Test
+    fun pesoInvalidoOuZeradoNaoPassa() {
+        // Meio de digitação ("0,") e zero não podem virar participante.
+        assertEquals(null, parseWeight("0,"))
+        assertEquals(null, parseWeight(""))
+        assertEquals(null, parseWeight("abc"))
+        assertEquals(null, parseWeight("0"))
+    }
+
+    @Test
+    fun aDicaDaTelaEhOMesmoNumeroDaUrl() {
+        // A tela mostra "Vai como X"; se X não for o que entra na URL, a pessoa confere um
+        // número e a rep recebe outro.
+        val cents = parseBrlToCents("89,9")!!
+        assertTrue(urlOf(valueCents = cents).contains("=${LancamentoForm.formatValor(cents)}"))
     }
 
     @Test

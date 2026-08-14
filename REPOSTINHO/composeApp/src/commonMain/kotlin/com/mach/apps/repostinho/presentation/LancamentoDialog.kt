@@ -1,28 +1,36 @@
 package com.mach.apps.repostinho.presentation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -30,13 +38,15 @@ import androidx.compose.ui.unit.dp
 import com.mach.apps.repostinho.data.model.MovementType
 import com.mach.apps.repostinho.data.remote.LancamentoDraft
 import com.mach.apps.repostinho.data.remote.LancamentoForm
+import com.mach.apps.repostinho.ui.RepIcons
+import com.mach.apps.repostinho.ui.accentColor
 
 /**
  * Monta um lançamento e abre o formulário do banco já preenchido.
  *
  * O app não envia nada: quem envia é o morador, no Forms, depois de conferir. A planilha
- * continua sendo a única fonte da verdade — este dialog só evita digitar 26 campos de peso
- * no celular, que é o que realmente dói no formulário de hoje.
+ * continua sendo a única fonte da verdade — este dialog só evita percorrer os 26 campos de
+ * peso no celular, que é o que dói no formulário de hoje.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,30 +67,33 @@ fun LancamentoDialog(
     val elegiveis = remember(participants) {
         participants.filter { it in LancamentoForm.nomesConhecidos }
     }
-    val selecionados = remember { mutableStateMapOf<String, Boolean>() }
 
-    // Coletivo é "todo mundo com peso 1", que é o caso mais comum e o mais chato de
-    // digitar. Entrar na tela já com todos marcados poupa 26 toques.
-    remember(type, elegiveis) {
-        if (type == MovementType.COLETIVO) {
-            elegiveis.forEach { selecionados[it] = true }
-        }
-        true
-    }
+    // Nome -> peso como o morador digitou. Texto, e não Double, porque "0," no meio da
+    // digitação não é número mas também não pode apagar o que a pessoa escreveu.
+    val pesos = remember { mutableStateMapOf<String, String>() }
 
     val cents = parseBrlToCents(value)
-    val marcados = elegiveis.filter { selecionados[it] == true }
     // Entrada não tem rateio: é dinheiro chegando, e a planilha espera peso nenhum.
-    val precisaDeParticipante = type != MovementType.ENTRADA
+    val precisaDeRateio = type != MovementType.ENTRADA
+    val pesosValidos = pesos.mapNotNull { (name, raw) ->
+        parseWeight(raw)?.let { name to it }
+    }.toMap()
+    val pesoInvalido = pesos.any { parseWeight(it.value) == null }
+
     val valid = description.isNotBlank() &&
         cents != null && cents > 0 &&
-        (!precisaDeParticipante || marcados.isNotEmpty())
+        !pesoInvalido &&
+        (!precisaDeRateio || pesosValidos.isNotEmpty())
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Novo lançamento") },
         text = {
-            Column(modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 440.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
@@ -94,6 +107,15 @@ fun LancamentoDialog(
                     onValueChange = { value = it },
                     label = { Text("Valor (R$)") },
                     singleLine = true,
+                    isError = value.isNotBlank() && cents == null,
+                    // O que vai para o formulário aparece aqui: ele só aceita ponto, e
+                    // quem digita com vírgula precisa ver que a conversão aconteceu.
+                    supportingText = {
+                        Text(
+                            if (cents != null) "Vai como ${LancamentoForm.formatValor(cents)}"
+                            else "Use vírgula ou ponto: 22,50"
+                        )
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                 )
@@ -103,52 +125,63 @@ fun LancamentoDialog(
                     MovementType.entries.forEach { option ->
                         FilterChip(
                             selected = option == type,
-                            onClick = {
-                                type = option
-                                // Trocar para Coletivo remarca todo mundo; sair dele limpa,
-                                // senão o rateio anterior vaza para um lançamento privado.
-                                if (option == MovementType.COLETIVO) {
-                                    elegiveis.forEach { selecionados[it] = true }
-                                } else {
-                                    selecionados.clear()
-                                }
-                            },
+                            onClick = { type = option },
                             label = { Text(rotulo(option)) }
                         )
                     }
                 }
 
                 Rotulo("Pagador")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LancamentoForm.pagadores.forEach { option ->
-                        FilterChip(
-                            selected = option == payer,
-                            onClick = { payer = option },
-                            label = { Text(option) }
-                        )
-                    }
-                }
+                Seletor(
+                    selecionado = payer,
+                    opcoes = LancamentoForm.pagadores,
+                    onSelect = { payer = it }
+                )
 
-                if (precisaDeParticipante) {
-                    Rotulo("Rateado entre (${marcados.size})")
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        elegiveis.forEach { name ->
-                            FilterChip(
-                                selected = selecionados[name] == true,
-                                onClick = {
-                                    selecionados[name] = selecionados[name] != true
-                                },
-                                label = { Text(name) }
+                if (precisaDeRateio) {
+                    Rotulo("Rateado entre (${pesosValidos.size})")
+
+                    val disponiveis = elegiveis.filterNot { it in pesos }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            Seletor(
+                                selecionado = "Adicionar pessoa…",
+                                opcoes = disponiveis,
+                                enabled = disponiveis.isNotEmpty(),
+                                onSelect = { pesos[it] = "1" }
                             )
                         }
+                        OutlinedButton(
+                            onClick = { elegiveis.forEach { pesos[it] = "1" } },
+                            enabled = disponiveis.isNotEmpty()
+                        ) {
+                            Text("Todos")
+                        }
                     }
-                    Text(
-                        text = "Todos entram com peso 1. Peso diferente disso ainda é no " +
-                            "formulário.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
+
+                    if (pesos.isEmpty()) {
+                        Text(
+                            text = "Ninguém no rateio ainda.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+
+                    // Uma linha por pessoa escolhida, em vez da lista inteira sempre à
+                    // vista: com 26 nomes, o rateio tomaria o dialog todo.
+                    elegiveis.filter { it in pesos }.forEach { name ->
+                        LinhaDePeso(
+                            name = name,
+                            peso = pesos[name].orEmpty(),
+                            onPeso = { pesos[name] = it },
+                            onRemover = { pesos.remove(name) }
+                        )
+                    }
                 }
 
                 // Nome que a planilha tem e o Forms não: quem não aparece na lista acima
@@ -160,7 +193,7 @@ fun LancamentoDialog(
                             "Para incluir alguém daí, use o formulário direto.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(top = 8.dp)
+                        modifier = Modifier.padding(top = 12.dp)
                     )
                 }
             }
@@ -174,11 +207,7 @@ fun LancamentoDialog(
                         type = type,
                         payer = payer,
                         valueCents = cents ?: 0L,
-                        weights = if (precisaDeParticipante) {
-                            marcados.associateWith { 1.0 }
-                        } else {
-                            emptyMap()
-                        }
+                        weights = if (precisaDeRateio) pesosValidos else emptyMap()
                     )
                     onDismiss()
                     onOpenForm(LancamentoForm.urlFor(draft))
@@ -191,6 +220,85 @@ fun LancamentoDialog(
             TextButton(onClick = onDismiss) { Text("Cancelar") }
         }
     )
+}
+
+/** Nome à esquerda, peso num campo estreito à direita, e o X para tirar do rateio. */
+@Composable
+private fun LinhaDePeso(
+    name: String,
+    peso: String,
+    onPeso: (String) -> Unit,
+    onRemover: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedTextField(
+            value = peso,
+            onValueChange = onPeso,
+            label = { Text("Peso") },
+            singleLine = true,
+            isError = parseWeight(peso) == null,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.width(104.dp)
+        )
+        IconButton(onClick = onRemover) {
+            Icon(
+                imageVector = RepIcons.Close,
+                contentDescription = "Tirar $name do rateio",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * Campo que abre a lista em menu.
+ *
+ * Os pagadores são 31 e os participantes 25 — como chips, qualquer um dos dois empurraria
+ * o resto do formulário para fora da tela.
+ */
+@Composable
+private fun Seletor(
+    selecionado: String,
+    opcoes: List<String>,
+    onSelect: (String) -> Unit,
+    enabled: Boolean = true
+) {
+    var aberto by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = { aberto = true },
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = selecionado,
+                modifier = Modifier.weight(1f),
+                color = if (enabled) accentColor() else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Icon(RepIcons.ExpandMore, contentDescription = null)
+        }
+        DropdownMenu(expanded = aberto, onDismissRequest = { aberto = false }) {
+            opcoes.forEach { opcao ->
+                DropdownMenuItem(
+                    text = { Text(opcao) },
+                    onClick = {
+                        onSelect(opcao)
+                        aberto = false
+                    }
+                )
+            }
+        }
+    }
 }
 
 @Composable

@@ -89,6 +89,15 @@ object RepIcons {
         icon("ExpandLess", "M12,8l-6,6 1.41,1.41L12,10.83l4.59,4.58L18,14z")
     }
 
+    /** X: tira uma pessoa do rateio sem apagar o resto do lançamento. */
+    val Close: ImageVector by lazy {
+        icon(
+            "Close",
+            "M19,6.41L17.59,5 12,10.59 6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 12,13.41" +
+                " 17.59,19 19,17.59 13.41,12z"
+        )
+    }
+
     /** Lixeira: apaga um evento que a rep cadastrou. */
     val Delete: ImageVector by lazy {
         icon(
