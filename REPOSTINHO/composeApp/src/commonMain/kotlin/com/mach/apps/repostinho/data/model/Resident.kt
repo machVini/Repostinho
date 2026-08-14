@@ -18,8 +18,15 @@ data class Resident(
      */
     val birthDay: Int? = null,
     val birthMonth: Int? = null,
-    /** "28/03/2026" — texto porque só é exibido, nunca comparado. */
-    val joinedAt: String? = null,
+    /**
+     * Mês e ano em que entrou na rep — "Março de 2026".
+     *
+     * Dois inteiros em vez de texto pronto pelo mesmo motivo do aniversário: texto entra
+     * escrito de cinco jeitos ("03/2026", "mar/26", "Março"), e aí ordenar ou comparar
+     * vira adivinhação. O dia não entra porque ninguém lembra.
+     */
+    val joinedMonth: Int? = null,
+    val joinedYear: Int? = null,
     /**
      * O email com que ele entra no app.
      *

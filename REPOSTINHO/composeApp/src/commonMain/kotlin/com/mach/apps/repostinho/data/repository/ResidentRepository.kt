@@ -68,7 +68,8 @@ class RemoteResidentRepository(
                 roomType = RoomType.DUPLO_MAIOR,
                 birthDay = 20,
                 birthMonth = 2,
-                joinedAt = "28/03/2026"
+                joinedMonth = 3,
+                joinedYear = 2026
             ),
             Resident("mais-novo", "Mais Novo", RoomType.DUPLO_MAIOR, sheetName = "Michel", birthDay = 17, birthMonth = 9),
             Resident("gab", "Gab", RoomType.DUPLO_MENOR, birthDay = 11, birthMonth = 1),

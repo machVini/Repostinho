@@ -653,6 +653,8 @@ function validResident(raw) {
   const roomType = ROOM_TYPES.includes(raw.roomType) ? raw.roomType : "INDIVIDUAL";
   const birthDay = intInRange(raw.birthDay, 1, 31);
   const birthMonth = intInRange(raw.birthMonth, 1, 12);
+  const joinedMonth = intInRange(raw.joinedMonth, 1, 12);
+  const joinedYear = intInRange(raw.joinedYear, 2000, 2100);
 
   return {
     id,
@@ -665,7 +667,9 @@ function validResident(raw) {
     // Dia sem mês (ou o contrário) não vira aniversário: o Calendário precisa dos dois.
     birthDay: birthDay !== null && birthMonth !== null ? birthDay : null,
     birthMonth: birthDay !== null && birthMonth !== null ? birthMonth : null,
-    joinedAt: typeof raw.joinedAt === "string" ? raw.joinedAt.trim() || null : null,
+    // Mês e ano de entrada. Um sem o outro não vira nada exibível, então caem juntos.
+    joinedMonth: joinedMonth !== null && joinedYear !== null ? joinedMonth : null,
+    joinedYear: joinedMonth !== null && joinedYear !== null ? joinedYear : null,
     photoUrl: typeof raw.photoUrl === "string" ? raw.photoUrl.trim() || null : null,
     // Minúsculo sempre: é por ele que o login casa a conta com o morador, e "VK@x.com"
     // e "vk@x.com" são o mesmo endereço para o provedor de autenticação.

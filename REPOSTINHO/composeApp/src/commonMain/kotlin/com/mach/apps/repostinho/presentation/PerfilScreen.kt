@@ -78,7 +78,7 @@ fun PerfilScreen(
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text("Dados", fontWeight = FontWeight.Bold)
                     InfoLine("Aniversário", formatBirthday(resident) ?: "—")
-                    InfoLine("Entrou na rep", resident?.joinedAt ?: "—")
+                    InfoLine("Entrou na rep", formatJoined(resident) ?: "—")
                     InfoLine("Quarto", resident?.roomType?.label ?: "—")
                 }
             }
@@ -154,6 +154,13 @@ fun PerfilScreen(
             }
         )
     }
+}
+
+/** "Março de 2026". O mês vem com inicial maiúscula por ser o começo da frase. */
+private fun formatJoined(resident: Resident?): String? {
+    val month = resident?.joinedMonth ?: return null
+    val year = resident.joinedYear ?: return null
+    return "${monthName(month).replaceFirstChar { it.uppercase() }} de $year"
 }
 
 /** "20 de fevereiro". Sem ano: a idade de ninguém precisa aparecer no perfil. */
