@@ -107,7 +107,7 @@ private val MONTHS = listOf(
 )
 
 /** Índice do mês vem 1-based; fora da faixa devolve vazio em vez de estourar. */
-private fun monthName(month: Int): String = MONTHS.getOrElse(month - 1) { "" }
+fun monthName(month: Int): String = MONTHS.getOrElse(month - 1) { "" }
 
 fun monthAbbrev(month: Int): String = monthName(month).take(3).uppercase()
 

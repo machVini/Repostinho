@@ -3,6 +3,7 @@ package com.mach.apps.repostinho.di
 import com.mach.apps.repostinho.data.local.BankSheetCache
 import com.mach.apps.repostinho.data.local.EventsCache
 import com.mach.apps.repostinho.data.local.MeetingNotesCache
+import com.mach.apps.repostinho.data.local.ResidentsCache
 import com.mach.apps.repostinho.data.local.RotationPreferenceStore
 import com.mach.apps.repostinho.data.local.ThemePreferenceStore
 import com.mach.apps.repostinho.data.local.textFileStore
@@ -11,10 +12,10 @@ import com.mach.apps.repostinho.data.repository.ChoreRepository
 import com.mach.apps.repostinho.data.repository.EventRepository
 import com.mach.apps.repostinho.data.remote.BankApi
 
-import com.mach.apps.repostinho.data.repository.InMemoryResidentRepository
 import com.mach.apps.repostinho.data.repository.MeetingNotesRepository
 import com.mach.apps.repostinho.data.repository.RemoteBankSheetRepository
 import com.mach.apps.repostinho.data.repository.RemoteEventRepository
+import com.mach.apps.repostinho.data.repository.RemoteResidentRepository
 import com.mach.apps.repostinho.data.repository.RotatingChoreRepository
 import com.mach.apps.repostinho.data.repository.RemoteMeetingNotesRepository
 import com.mach.apps.repostinho.data.repository.ResidentRepository
@@ -27,9 +28,10 @@ import org.koin.dsl.module
  * no Android depende do `Context`, que só existe na `Application`.
  */
 fun appModule(cacheDirectory: String) = module {
-    // Moradores e eventos ainda são fixos no código e se perdem ao fechar o app.
-    // Só o banco tem fonte de verdade fora dele (a planilha).
-    single<ResidentRepository> { InMemoryResidentRepository() }
+    // Os moradores vêm do banco-api; a lista embutida no app é só o retrato inicial,
+    // para a primeira abertura sem rede não ficar sem ninguém.
+    single { ResidentsCache(textFileStore(cacheDirectory)) }
+    single<ResidentRepository> { RemoteResidentRepository(get(), get()) }
 
     // A agenda fixa vem no binário; o que a rep cadastra pela tela mora no banco-api,
     // para aparecer no celular de todos.

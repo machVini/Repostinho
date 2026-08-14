@@ -53,6 +53,23 @@ const TAREFAS_TTL_SECONDS = 60 * 24 * 60 * 60;
  */
 const EVENTOS_KEY = "eventos:v1";
 
+/**
+ * Onde ficam os moradores.
+ *
+ * Saíram do código do app para cá porque foto, aniversário e data de entrada mudam sem
+ * que ninguém queira publicar versão nova só por isso.
+ */
+const MORADORES_KEY = "moradores:v1";
+
+/** Os tipos de quarto que o app sabe desenhar. */
+const ROOM_TYPES = [
+  "INDIVIDUAL",
+  "DUPLO_MAIOR",
+  "DUPLO_MENOR",
+  "TRIPLO_MAIOR",
+  "TRIPLO_MENOR",
+];
+
 /** O que o app sabe desenhar. Categoria desconhecida vira ROLE em vez de derrubar a tela. */
 const EVENT_CATEGORIES = ["ANIVERSARIO", "REP", "ROLE", "ARU"];
 const RECURRENCES = ["NENHUMA", "MENSAL", "ANUAL"];
@@ -500,6 +517,94 @@ function eventosResponse(events) {
 }
 
 /**
+ * Os moradores da rep.
+ *
+ * O app traz uma lista embutida para a primeira abertura sem rede; esta é a que manda
+ * quando existe. `POST` grava a lista inteira de uma vez — são 15 pessoas que mudam
+ * duas vezes por ano, e mandar tudo evita a pergunta de o que fazer com quem sumiu.
+ */
+async function handleMoradores(request, env) {
+  if (!env.TAREFAS) {
+    return json({ error: "KV TAREFAS não configurado" }, 500);
+  }
+
+  if (request.method === "GET") {
+    return moradoresResponse(await readMoradores(env));
+  }
+
+  if (request.method !== "POST") {
+    return json({ error: "method not allowed" }, 405);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "corpo não é JSON" }, 400);
+  }
+
+  if (!Array.isArray(body?.residents)) {
+    return json({ error: "residents deve ser uma lista" }, 400);
+  }
+
+  const residents = body.residents.map(validResident).filter(Boolean);
+  if (residents.length !== body.residents.length) {
+    return json({ error: "algum morador está inválido" }, 400);
+  }
+
+  await env.TAREFAS.put(MORADORES_KEY, JSON.stringify(residents));
+  return moradoresResponse(residents);
+}
+
+async function readMoradores(env) {
+  const raw = await env.TAREFAS.get(MORADORES_KEY, { type: "json" });
+  if (!Array.isArray(raw)) return [];
+  return raw.map(validResident).filter(Boolean);
+}
+
+/**
+ * Aceita só o que o app consegue desenhar.
+ *
+ * Campo torto aqui viraria exceção de desserialização no Kotlin, e o app abriria sem
+ * morador nenhum — sem nome, sem tarefa, sem saldo próprio.
+ */
+function validResident(raw) {
+  if (!raw || typeof raw !== "object") return null;
+
+  const id = typeof raw.id === "string" ? raw.id.trim() : "";
+  const name = typeof raw.name === "string" ? raw.name.trim() : "";
+  if (!id || !name) return null;
+
+  const roomType = ROOM_TYPES.includes(raw.roomType) ? raw.roomType : "INDIVIDUAL";
+  const birthDay = intInRange(raw.birthDay, 1, 31);
+  const birthMonth = intInRange(raw.birthMonth, 1, 12);
+
+  return {
+    id,
+    name,
+    roomType,
+    isModerator: raw.isModerator === true,
+    // Ausente é morador ativo: só quem saiu é marcado, e esquecer o campo não pode
+    // apagar alguém da escala.
+    isActive: raw.isActive !== false,
+    // Dia sem mês (ou o contrário) não vira aniversário: o Calendário precisa dos dois.
+    birthDay: birthDay !== null && birthMonth !== null ? birthDay : null,
+    birthMonth: birthDay !== null && birthMonth !== null ? birthMonth : null,
+    joinedAt: typeof raw.joinedAt === "string" ? raw.joinedAt.trim() || null : null,
+    photoUrl: typeof raw.photoUrl === "string" ? raw.photoUrl.trim() || null : null,
+  };
+}
+
+function intInRange(value, min, max) {
+  return Number.isInteger(value) && value >= min && value <= max ? value : null;
+}
+
+/** Lista viva: cachear na borda esconderia a foto que alguém acabou de trocar. */
+function moradoresResponse(residents) {
+  return json({ residents }, 200, { "cache-control": "no-store" });
+}
+
+/**
  * Chave de cache que muda quando a resposta deveria mudar.
  *
  * `wrangler deploy` não limpa o cache de borda: uma entrada gravada antes continua sendo
@@ -549,6 +654,7 @@ export default {
     if (url.pathname === "/atas") return handleAtas(request, env, ctx);
     if (url.pathname === "/tarefas") return handleTarefas(request, env);
     if (url.pathname === "/eventos") return handleEventos(request, env);
+    if (url.pathname === "/moradores") return handleMoradores(request, env);
     if (url.pathname !== "/banco") {
       return json({ error: "not found" }, 404);
     }

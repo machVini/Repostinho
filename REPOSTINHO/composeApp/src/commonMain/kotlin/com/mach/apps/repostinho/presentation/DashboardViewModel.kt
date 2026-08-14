@@ -15,7 +15,7 @@ import com.mach.apps.repostinho.data.model.Resident
 import com.mach.apps.repostinho.data.repository.BankSheetRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
 import com.mach.apps.repostinho.data.repository.EventRepository
-import com.mach.apps.repostinho.data.repository.InMemoryResidentRepository
+import com.mach.apps.repostinho.data.repository.RemoteResidentRepository
 import com.mach.apps.repostinho.data.repository.MeetingNotesRepository
 import com.mach.apps.repostinho.data.repository.ResidentRepository
 import com.mach.apps.repostinho.data.repository.RotatingChoreRepository
@@ -37,7 +37,7 @@ import kotlinx.datetime.todayIn
 data class BankUiState(
     val residents: List<Resident> = emptyList(),
     /** Quem está usando o app. Fixo no VK enquanto não existe login. */
-    val currentResidentId: String = InMemoryResidentRepository.CURRENT_USER_ID
+    val currentResidentId: String = RemoteResidentRepository.CURRENT_USER_ID
 ) {
     val currentResident: Resident?
         get() = residents.firstOrNull { it.id == currentResidentId }
@@ -86,7 +86,7 @@ class DashboardViewModel(
 ) : ViewModel() {
 
     private val currentResidentId =
-        MutableStateFlow(InMemoryResidentRepository.CURRENT_USER_ID)
+        MutableStateFlow(RemoteResidentRepository.CURRENT_USER_ID)
 
     val uiState: StateFlow<BankUiState> = combine(
         residentRepository.getResidents(),
@@ -132,8 +132,17 @@ class DashboardViewModel(
      * sozinho. Por isso a lista sai daqui pronta, em vez de a tela receber os eventos e
      * ter que expandi-los.
      */
-    val events: StateFlow<List<EventOccurrence>> = eventRepository.getEvents()
-        .map { EventSchedule.occurrencesUntilEndOfYear(it, today()) }
+    val events: StateFlow<List<EventOccurrence>> = combine(
+        eventRepository.getEvents(),
+        residentRepository.getResidents()
+    ) { events, residents ->
+        // Os aniversários saem dos moradores, não da agenda: assim trocar de morador
+        // atualiza as duas coisas de uma vez.
+        EventSchedule.occurrencesUntilEndOfYear(
+            events + EventSchedule.birthdaysOf(residents),
+            today()
+        )
+    }
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -176,6 +185,7 @@ class DashboardViewModel(
             eventsRefreshingState.value = true
             try {
                 eventRepository.refresh()
+                residentRepository.refresh()
             } finally {
                 // `finally` porque o indicador girando para sempre é pior do que uma
                 // agenda desatualizada: a tela ficaria travada sem nada explicando.
@@ -207,6 +217,8 @@ class DashboardViewModel(
         viewModelScope.launch { meetingNotesRepository.refresh(fresh) }
         // A agenda cadastrada pela rep vem no mesmo gesto.
         viewModelScope.launch { eventRepository.refresh() }
+        // Foto e aniversário vêm com os moradores, e mudam sem aviso.
+        viewModelScope.launch { residentRepository.refresh() }
         // A escala não vem da rede, mas depende da data: sem recalcular aqui, um app
         // deixado aberto atravessa a quarta-feira mostrando a semana anterior.
         viewModelScope.launch { choreRepository.refresh() }

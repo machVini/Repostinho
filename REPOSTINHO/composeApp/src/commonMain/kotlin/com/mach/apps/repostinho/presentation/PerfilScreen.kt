@@ -1,6 +1,9 @@
 package com.mach.apps.repostinho.presentation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,16 +11,22 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.mach.apps.repostinho.data.model.ChoreTask
+import com.mach.apps.repostinho.data.model.Resident
 import com.mach.apps.repostinho.ui.positiveColor
 
 @Composable
@@ -40,16 +49,26 @@ fun PerfilScreen(
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(
-                        text = resident?.name ?: "—",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ResidentPhoto(
+                        photoUrl = resident?.photoUrl,
+                        name = resident?.name.orEmpty()
                     )
-                    Text(
-                        text = resident?.roomType?.label ?: "",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = resident?.name ?: "—",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = resident?.roomType?.label ?: "",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
             }
         }
@@ -58,14 +77,9 @@ fun PerfilScreen(
             Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text("Dados", fontWeight = FontWeight.Bold)
-                    InfoLine("Aniversário", resident?.birthDate ?: "—")
+                    InfoLine("Aniversário", formatBirthday(resident) ?: "—")
                     InfoLine("Entrou na rep", resident?.joinedAt ?: "—")
                     InfoLine("Quarto", resident?.roomType?.label ?: "—")
-                    InfoLine(
-                        "Papel",
-                        if (resident?.isModerator == true) "Responsável pelo financeiro"
-                        else "Morador"
-                    )
                 }
             }
         }
@@ -106,6 +120,47 @@ fun PerfilScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp)
+            )
+        }
+    }
+}
+
+/** "20 de fevereiro". Sem ano: a idade de ninguém precisa aparecer no perfil. */
+private fun formatBirthday(resident: Resident?): String? {
+    val day = resident?.birthDay ?: return null
+    val month = resident.birthMonth ?: return null
+    return "$day de ${monthName(month)}"
+}
+
+/**
+ * Foto do morador, ou a inicial dele num círculo.
+ *
+ * O monograma não é enfeite: a foto vem por URL e pode faltar, demorar ou falhar, e um
+ * buraco no topo do perfil parece tela quebrada.
+ */
+@Composable
+private fun ResidentPhoto(photoUrl: String?, name: String) {
+    val initial = name.trim().firstOrNull()?.uppercase() ?: "?"
+
+    Box(
+        modifier = Modifier
+            .size(72.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = initial,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (!photoUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = photoUrl,
+                contentDescription = "Foto de $name",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize()
             )
         }
     }

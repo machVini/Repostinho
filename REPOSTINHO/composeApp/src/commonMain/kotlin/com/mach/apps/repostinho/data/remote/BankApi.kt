@@ -5,6 +5,7 @@ import com.mach.apps.repostinho.data.model.MeetingNotes
 import com.mach.apps.repostinho.data.model.MemberBalance
 import com.mach.apps.repostinho.data.model.Movement
 import com.mach.apps.repostinho.data.model.RepEvent
+import com.mach.apps.repostinho.data.model.Resident
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -67,6 +68,12 @@ data class EventsPayload(
     val events: List<RepEvent> = emptyList()
 )
 
+/** Os moradores da rep, com foto, aniversário e data de entrada. */
+@Serializable
+data class ResidentsPayload(
+    val residents: List<Resident> = emptyList()
+)
+
 @Serializable
 private data class AddEventRequest(val event: RepEvent)
 
@@ -100,6 +107,9 @@ class BankApi(private val client: HttpClient) {
      */
     suspend fun setChoreDone(week: Int, choreId: String, done: Boolean): ChoreDonePayload =
         post("tarefas", ChoreDoneRequest(week = week, choreId = choreId, done = done))
+
+    /** Os moradores da rep. Lança em caso de falha. */
+    suspend fun fetchResidents(): ResidentsPayload = get("moradores")
 
     /** A agenda cadastrada pela rep. Lança em caso de falha. */
     suspend fun fetchEvents(): EventsPayload = get("eventos")

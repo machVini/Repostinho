@@ -9,9 +9,24 @@ data class Resident(
     val roomType: RoomType = RoomType.INDIVIDUAL,
     val isModerator: Boolean = false, // Para os dois que controlam o financeiro
     val isActive: Boolean = true, // Ex-morador continua no histórico, mas sai dos rateios
-    // TODO: virar data de verdade quando entrar kotlinx-datetime no projeto.
-    val birthDate: String? = null,
-    val joinedAt: String? = null
+    /**
+     * Dia e mês do aniversário. O ano é opcional e não aparece em lugar nenhum.
+     *
+     * É daqui que o Calendário monta os aniversários: enquanto eles eram eventos escritos
+     * à mão, a mesma data existia em dois lugares e a segunda ficaria velha na primeira
+     * troca de morador.
+     */
+    val birthDay: Int? = null,
+    val birthMonth: Int? = null,
+    /** "28/03/2026" — texto porque só é exibido, nunca comparado. */
+    val joinedAt: String? = null,
+    /**
+     * URL da foto. Vazio cai no monograma com a inicial do nome.
+     *
+     * URL, e não imagem embutida: foto no binário obriga a publicar versão nova do app
+     * toda vez que alguém troca a sua.
+     */
+    val photoUrl: String? = null
 )
 
 /** O quarto define o peso do morador no rateio do aluguel + contas fixas. */
