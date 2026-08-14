@@ -75,8 +75,32 @@ kotlin {
             isStatic = true
         }
     }
-    
+
+    /*
+     * Android e iOS compartilham o que o navegador não alcança — hoje, o Firebase do
+     * GitLive, que não publica artefato Wasm. Sem este nível, `commonMain` não compilaria
+     * para web.
+     *
+     * Feito estendendo o template em vez de `dependsOn` na mão: o `dependsOn` manual
+     * desliga a hierarquia padrão para os alvos tocados, e o `iosMain` some da compilação
+     * nativa — os `actual` de iOS deixam de ser encontrados.
+     */
+    applyDefaultHierarchyTemplate {
+        common {
+            group("mobile") {
+                withAndroidTarget()
+                withIos()
+            }
+        }
+    }
+
     sourceSets {
+        val mobileMain by getting {
+            dependencies {
+                implementation(libs.firebase.auth)
+            }
+        }
+
         commonMain {
             kotlin.srcDir(generateBankApiConfig.map { it.outputs.files.singleFile })
         }
@@ -96,7 +120,6 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.coil.compose)
             implementation(libs.coil.networkKtor)
-            implementation(libs.firebase.auth)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
