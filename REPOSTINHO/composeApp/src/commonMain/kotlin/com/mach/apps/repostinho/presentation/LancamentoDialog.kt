@@ -59,7 +59,9 @@ fun LancamentoDialog(
 ) {
     var description by remember { mutableStateOf("") }
     var value by remember { mutableStateOf("") }
-    var type by remember { mutableStateOf(MovementType.COLETIVO) }
+    // Sem tipo pré-selecionado: um padrão vira o tipo mais lançado por descuido, e o tipo
+    // decide se o gasto é rateado ou não. Escolher é obrigatório.
+    var type by remember { mutableStateOf<MovementType?>(null) }
     var payer by remember { mutableStateOf(currentMemberName) }
 
     // Só oferece quem tem campo no Forms: um peso para alguém de fora não teria onde ser
@@ -82,6 +84,7 @@ fun LancamentoDialog(
 
     val valid = description.isNotBlank() &&
         cents != null && cents > 0 &&
+        type != null &&
         !pesoInvalido &&
         (!precisaDeRateio || pesosValidos.isNotEmpty())
 
@@ -129,6 +132,15 @@ fun LancamentoDialog(
                             label = { Text(rotulo(option)) }
                         )
                     }
+                }
+                // Sem isto, o botão desligado não explica o que falta.
+                if (type == null) {
+                    Text(
+                        text = "Escolha o tipo do lançamento.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
 
                 Rotulo("Pagador")
@@ -204,7 +216,8 @@ fun LancamentoDialog(
                 onClick = {
                     val draft = LancamentoDraft(
                         description = description.trim(),
-                        type = type,
+                        // `valid` já garante que há tipo; sem ele o botão está desligado.
+                        type = type ?: return@TextButton,
                         payer = payer,
                         valueCents = cents ?: 0L,
                         weights = if (precisaDeRateio) pesosValidos else emptyMap()
