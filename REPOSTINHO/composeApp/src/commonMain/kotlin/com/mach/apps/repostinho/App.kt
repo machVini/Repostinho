@@ -38,7 +38,9 @@ import com.mach.apps.repostinho.presentation.SheetUiState
 import com.mach.apps.repostinho.presentation.TarefasScreen
 import com.mach.apps.repostinho.ui.AutoSizeLabel
 import com.mach.apps.repostinho.ui.RepIcons
+import coil3.compose.setSingletonImageLoaderFactory
 import com.mach.apps.repostinho.ui.RepostinhoTheme
+import com.mach.apps.repostinho.ui.repImageLoader
 import com.mach.apps.repostinho.ui.barContainerColor
 import com.mach.apps.repostinho.ui.barIndicatorColor
 import com.mach.apps.repostinho.ui.onBarColor
@@ -59,6 +61,10 @@ private enum class AppTab(val label: String, val title: String, val icon: ImageV
 fun App() {
     // KoinContext por fora do tema: a preferência salva precisa ser lida antes de decidir
     // a cor, e quem a guarda vem da injeção.
+    // O Coil precisa do token para buscar a foto do morador no banco-api; sem isto toda
+    // foto volta 401 e o perfil mostra o monograma como se ninguém tivesse foto.
+    setSingletonImageLoaderFactory { context -> repImageLoader(context) }
+
     KoinContext {
         val themeStore = koinInject<ThemePreferenceStore>()
         val systemDark = isSystemInDarkTheme()

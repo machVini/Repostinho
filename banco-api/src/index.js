@@ -61,6 +61,27 @@ const EVENTOS_KEY = "eventos:v1";
  */
 const MORADORES_KEY = "moradores:v1";
 
+/**
+ * Prefixo das fotos dos moradores no KV.
+ *
+ * O lugar certo para binário seria o R2, mas ele precisa ser habilitado no Dashboard e
+ * costuma pedir cartão. São quinze fotos de poucos KB, lidas o tempo todo e trocadas
+ * quase nunca — cabem aqui sem drama. O app só conhece a URL, então mudar para R2 depois
+ * não encosta no Kotlin.
+ */
+const FOTOS_PREFIX = "foto:v1";
+
+/**
+ * Teto por foto.
+ *
+ * O KV aceita 25 MiB, mas uma foto de celular sem redimensionar chega a 5 MB e o app
+ * baixaria isso a cada perfil aberto. Recusar na entrada é mais gentil do que descobrir
+ * pela conta de banda.
+ */
+const FOTO_MAX_BYTES = 2 * 1024 * 1024;
+
+const FOTO_TIPOS = ["image/jpeg", "image/png", "image/webp"];
+
 /** Os tipos de quarto que o app sabe desenhar. */
 const ROOM_TYPES = [
   "INDIVIDUAL",
@@ -517,6 +538,59 @@ function eventosResponse(events) {
 }
 
 /**
+ * A foto de um morador: `/foto/<id>`.
+ *
+ * Servida pelo Worker, e não por um bucket público, para ficar atrás do mesmo token do
+ * resto. Foto de gente numa URL pública e adivinhável (`.../vk.jpg`) seria a única coisa
+ * do app aberta para quem passasse por ali.
+ */
+async function handleFoto(request, env, id) {
+  if (!env.TAREFAS) {
+    return json({ error: "KV TAREFAS não configurado" }, 500);
+  }
+  if (!id) return json({ error: "faltou o id do morador" }, 400);
+
+  const key = `${FOTOS_PREFIX}:${id}`;
+
+  if (request.method === "GET") {
+    const { value, metadata } = await env.TAREFAS.getWithMetadata(key, {
+      type: "arrayBuffer",
+    });
+    if (!value) return json({ error: "sem foto" }, 404);
+
+    return new Response(value, {
+      headers: {
+        "content-type": metadata?.contentType ?? "image/jpeg",
+        // Curto de propósito: trocar a foto e continuar vendo a antiga por um dia seria
+        // a primeira reclamação. O app ainda tem o cache dele por cima.
+        "cache-control": "private, max-age=300",
+      },
+    });
+  }
+
+  if (request.method !== "PUT") {
+    return json({ error: "method not allowed" }, 405);
+  }
+
+  const contentType = (request.headers.get("content-type") ?? "").split(";")[0].trim();
+  if (!FOTO_TIPOS.includes(contentType)) {
+    return json({ error: `content-type deve ser um de ${FOTO_TIPOS.join(", ")}` }, 415);
+  }
+
+  const bytes = await request.arrayBuffer();
+  if (bytes.byteLength === 0) return json({ error: "corpo vazio" }, 400);
+  if (bytes.byteLength > FOTO_MAX_BYTES) {
+    return json(
+      { error: `foto tem ${bytes.byteLength} bytes; o limite é ${FOTO_MAX_BYTES}` },
+      413
+    );
+  }
+
+  await env.TAREFAS.put(key, bytes, { metadata: { contentType } });
+  return json({ id, bytes: bytes.byteLength, contentType }, 200);
+}
+
+/**
  * Os moradores da rep.
  *
  * O app traz uma lista embutida para a primeira abertura sem rede; esta é a que manda
@@ -655,6 +729,9 @@ export default {
     if (url.pathname === "/tarefas") return handleTarefas(request, env);
     if (url.pathname === "/eventos") return handleEventos(request, env);
     if (url.pathname === "/moradores") return handleMoradores(request, env);
+    if (url.pathname.startsWith("/foto/")) {
+      return handleFoto(request, env, decodeURIComponent(url.pathname.slice("/foto/".length)));
+    }
     if (url.pathname !== "/banco") {
       return json({ error: "not found" }, 404);
     }
