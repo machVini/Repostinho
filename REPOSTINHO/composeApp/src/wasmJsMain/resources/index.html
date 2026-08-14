@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="theme-color" content="#0B63D6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Repostinho">
+    <title>República Postinho</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" href="icon-192.png">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background: #0B63D6;
+            overscroll-behavior: none;
+        }
+        #composeTarget { width: 100%; height: 100%; }
+        /* Tela de espera enquanto o Wasm baixa: são ~4,7 MB, e um azul chapado sem
+           explicação parece app travado. */
+        #loading {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+            color: #FFC400;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-weight: bold;
+            text-align: center;
+        }
+        #loading img { width: 96px; height: 96px; border-radius: 24px; }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <img src="icon-192.png" alt="">
+        <div>Carregando…</div>
+    </div>
+    <div id="composeTarget"></div>
+
+    <!--
+        Ponte para o Firebase.
+
+        O SDK do GitLive, que o Android e o iOS usam, não publica artefato Wasm — então na
+        web o login passa pelo SDK JavaScript, e o Kotlin fala com ele por estas três
+        funções em `globalThis.repostinhoAuth`.
+
+        A configuração fica fora daqui, em firebase-config.js, que é gitignored: são as
+        chaves do SEU projeto. Elas não são segredo (o Firebase web expõe a apiKey de
+        propósito, e quem protege os dados são as regras e o banco-api), mas também não
+        têm por que estar no repositório.
+    -->
+    <script src="firebase-config.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import {
+            getAuth,
+            signInWithEmailAndPassword,
+            signOut,
+            setPersistence,
+            browserLocalPersistence,
+        } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+
+        const config = globalThis.repostinhoFirebaseConfig;
+        if (!config) {
+            console.error("[repostinho] firebase-config.js ausente: o login não vai funcionar");
+        } else {
+            const auth = getAuth(initializeApp(config));
+            // Sem isto a sessão morre ao fechar a aba, e o morador loga toda vez.
+            await setPersistence(auth, browserLocalPersistence);
+
+            globalThis.repostinhoAuth = {
+                signIn: (email, password) => signInWithEmailAndPassword(auth, email, password),
+                signOut: () => signOut(auth),
+                idToken: async () => {
+                    // `false` usa o token em cache e só renova perto de vencer — mesma
+                    // escolha do FirebaseTokens no Android e no iOS.
+                    const user = auth.currentUser;
+                    return user ? await user.getIdToken(false) : null;
+                },
+            };
+        }
+    </script>
+
+    <script type="application/javascript" src="composeApp.js"></script>
+    <script type="application/javascript">
+        // O Compose só anexa o canvas no primeiro frame; até lá o aviso continua.
+        const observer = new MutationObserver(() => {
+            if (document.querySelector('canvas')) {
+                document.getElementById('loading')?.remove();
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .catch(e => console.warn('[repostinho] service worker falhou:', e));
+            });
+        }
+    </script>
+</body>
+</html>

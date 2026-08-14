@@ -23,3 +23,6 @@ node_modules/
 # O build funciona sem eles: o Firebase entra desligado e o app cai no provedor local.
 google-services.json
 GoogleService-Info.plist
+
+# Config web do Firebase: chaves do projeto, ficam fora do repositorio.
+composeApp/src/wasmJsMain/resources/firebase-config.js

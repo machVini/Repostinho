@@ -76,6 +76,13 @@ kotlin {
         }
     }
 
+    // Alvo web para o PWA. O binário sai em build/dist/wasmJs/productionExecutable.
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+        binaries.executable()
+    }
+
     /*
      * Android e iOS compartilham o que o navegador não alcança — hoje, o Firebase do
      * GitLive, que não publica artefato Wasm. Sem este nível, `commonMain` não compilaria
@@ -112,6 +119,9 @@ kotlin {
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
+        }
+        wasmJsMain.dependencies {
+            implementation(libs.ktor.client.js)
         }
         commonMain.dependencies {
             implementation(libs.ktor.client.core)
