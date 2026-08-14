@@ -57,7 +57,7 @@ class RemoteResidentRepository(
          * coisas, a mesma data existia em dois lugares para divergir na primeira troca.
          */
         val SEED = listOf(
-            Resident("leozinho", "Leozinho", RoomType.INDIVIDUAL, birthDay = 11, birthMonth = 1),
+            Resident("leozinho", "Leozinho", RoomType.INDIVIDUAL, sheetName = "Leozin", birthDay = 11, birthMonth = 1),
             Resident("pico", "Pico", RoomType.INDIVIDUAL, birthDay = 28, birthMonth = 10),
             Resident("ll", "LL", RoomType.INDIVIDUAL, birthDay = 29, birthMonth = 12),
             Resident("du", "Du", RoomType.DUPLO_MAIOR),
@@ -70,12 +70,12 @@ class RemoteResidentRepository(
                 birthMonth = 2,
                 joinedAt = "28/03/2026"
             ),
-            Resident("mais-novo", "Mais Novo", RoomType.DUPLO_MAIOR, birthDay = 17, birthMonth = 9),
+            Resident("mais-novo", "Mais Novo", RoomType.DUPLO_MAIOR, sheetName = "Michel", birthDay = 17, birthMonth = 9),
             Resident("gab", "Gab", RoomType.DUPLO_MENOR, birthDay = 11, birthMonth = 1),
-            Resident("gustavo", "Gustavo", RoomType.DUPLO_MENOR, birthDay = 22, birthMonth = 10),
+            Resident("gustavo", "Gustavo", RoomType.DUPLO_MENOR, sheetName = "Gu", birthDay = 22, birthMonth = 10),
             Resident("cansado", "Cansado", RoomType.TRIPLO_MAIOR, birthDay = 31, birthMonth = 8),
-            Resident("mixas", "Mixas", RoomType.TRIPLO_MAIOR, birthDay = 10, birthMonth = 11),
-            Resident("tz", "TZ", RoomType.TRIPLO_MAIOR, birthDay = 2, birthMonth = 8),
+            Resident("mixas", "Mixas", RoomType.TRIPLO_MAIOR, sheetName = "Mixirica", birthDay = 10, birthMonth = 11),
+            Resident("tz", "TZ", RoomType.TRIPLO_MAIOR, sheetName = "Massa", birthDay = 2, birthMonth = 8),
             Resident("lameu", "Lameu", RoomType.TRIPLO_MENOR, birthDay = 20, birthMonth = 11),
             // Saiu da rep: fica no cadastro porque os lançamentos antigos têm o nome dele,
             // e sumir com ele deixaria aqueles rateios sem dono.
