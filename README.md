@@ -250,7 +250,14 @@ wrangler dev
 # App (compiles both targets, runs common + platform tests)
 cd REPOSTINHO
 ./gradlew :composeApp:compileKotlinIosSimulatorArm64 :composeApp:testDebugUnitTest
+
+# Web build (the PWA target)
+./gradlew :composeApp:wasmJsBrowserDistribution
 ```
+
+The same Compose UI also compiles to WebAssembly and ships as an installable PWA, so
+iPhones can run it without the Apple Developer Program. See [`docs/pwa.md`](docs/pwa.md)
+for the deploy runbook.
 
 The app builds and runs without any secrets configured — it just falls back to bundled
 placeholder data instead of live numbers. See [`banco-api/README.md`](banco-api/README.md)
