@@ -40,6 +40,7 @@ import com.mach.apps.repostinho.data.remote.LancamentoDraft
 import com.mach.apps.repostinho.data.remote.LancamentoForm
 import com.mach.apps.repostinho.ui.RepIcons
 import com.mach.apps.repostinho.ui.accentColor
+import com.mach.apps.repostinho.ui.dismissKeyboardOnTap
 
 /**
  * Monta um lançamento e abre o formulário do banco já preenchido.
@@ -96,6 +97,7 @@ fun LancamentoDialog(
                 modifier = Modifier
                     .heightIn(max = 440.dp)
                     .verticalScroll(rememberScrollState())
+                    .dismissKeyboardOnTap()
             ) {
                 OutlinedTextField(
                     value = description,
