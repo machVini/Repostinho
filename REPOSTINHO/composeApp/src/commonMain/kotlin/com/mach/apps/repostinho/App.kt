@@ -77,6 +77,7 @@ fun App() {
             val notes by viewModel.meetingNotes.collectAsStateWithLifecycle()
             val rotation by viewModel.rotation.collectAsStateWithLifecycle()
             val eventsShared by viewModel.eventsShared.collectAsStateWithLifecycle()
+            val eventsRefreshing by viewModel.eventsRefreshing.collectAsStateWithLifecycle()
 
             var selectedTab by remember { mutableStateOf(AppTab.HOME) }
 
@@ -224,6 +225,8 @@ fun App() {
                             occurrences = events,
                             isShared = eventsShared,
                             year = viewModel.currentYear,
+                            isRefreshing = eventsRefreshing,
+                            onRefresh = viewModel::refreshEvents,
                             onAddEvent = viewModel::addEvent,
                             onRemoveEvent = viewModel::removeEvent,
                             modifier = inset

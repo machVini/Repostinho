@@ -22,6 +22,7 @@ import com.mach.apps.repostinho.data.repository.RotatingChoreRepository
 import com.mach.apps.repostinho.data.repository.RotationStatus
 import com.mach.apps.repostinho.data.repository.SyncState
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
@@ -136,6 +137,11 @@ class DashboardViewModel(
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    private val eventsRefreshingState = MutableStateFlow(false)
+
+    /** Move o indicador do puxar-para-atualizar do Calendário. */
+    val eventsRefreshing: StateFlow<Boolean> = eventsRefreshingState.asStateFlow()
+
     val eventsShared: StateFlow<Boolean> = eventRepository.isShared()
         .catch { emit(false) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
@@ -157,6 +163,25 @@ class DashboardViewModel(
     private fun today(): RepDate {
         val date = Clock.System.todayIn(RotatingChoreRepository.CAMPINAS)
         return RepDate(day = date.day, month = date.month.ordinal + 1, year = date.year)
+    }
+
+    /**
+     * Rebusca só a agenda, para o puxar-para-atualizar do Calendário.
+     *
+     * Separado do [refreshSheet] porque ali o gesto acontece sobre saldos e atas; aqui o
+     * morador está olhando eventos, e buscar a planilha inteira só atrasaria o indicador.
+     */
+    fun refreshEvents() {
+        viewModelScope.launch {
+            eventsRefreshingState.value = true
+            try {
+                eventRepository.refresh()
+            } finally {
+                // `finally` porque o indicador girando para sempre é pior do que uma
+                // agenda desatualizada: a tela ficaria travada sem nada explicando.
+                eventsRefreshingState.value = false
+            }
+        }
     }
 
     /** Cadastra um evento para a rep inteira. */
