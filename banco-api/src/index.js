@@ -561,9 +561,10 @@ async function handleFoto(request, env, id) {
     return new Response(value, {
       headers: {
         "content-type": metadata?.contentType ?? "image/jpeg",
-        // Curto de propósito: trocar a foto e continuar vendo a antiga por um dia seria
-        // a primeira reclamação. O app ainda tem o cache dele por cima.
-        "cache-control": "private, max-age=300",
+        // Sem cache: trocar a foto e continuar vendo a antiga é a primeira reclamação, e
+        // são quinze imagens pequenas pedidas por uma tela só. Se um dia pesar, o
+        // caminho é versionar a URL em vez de voltar a cachear às cegas.
+        "cache-control": "no-store",
       },
     });
   }

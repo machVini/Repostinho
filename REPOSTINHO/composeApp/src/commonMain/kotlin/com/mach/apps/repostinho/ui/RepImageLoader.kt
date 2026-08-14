@@ -3,6 +3,7 @@ package com.mach.apps.repostinho.ui
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.network.ktor2.KtorNetworkFetcherFactory
+import coil3.request.CachePolicy
 import coil3.request.crossfade
 import com.mach.apps.repostinho.data.remote.BankApiConfig
 import io.ktor.client.HttpClient
@@ -23,6 +24,12 @@ fun repImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(
     .components {
         add(KtorNetworkFetcherFactory(httpClient = { authorizedClient() }))
     }
+    // Sem cache nenhum: trocar a foto e continuar vendo a antiga — em memória até fechar
+    // o app, em disco por dias — é pior do que rebaixar uma imagem pequena. São quinze
+    // fotos de poucos KB, pedidas por uma tela só. Quando isso pesar, o caminho é
+    // versionar a URL da foto, não voltar a cachear às cegas.
+    .memoryCachePolicy(CachePolicy.DISABLED)
+    .diskCachePolicy(CachePolicy.DISABLED)
     .crossfade(true)
     .build()
 

@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.mach.apps.repostinho.data.model.ChoreTask
@@ -42,34 +43,23 @@ fun PerfilScreen(
 
     LazyColumn(modifier = modifier.fillMaxWidth()) {
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+            // Sem card em volta: a foto é o retrato de quem está usando o app, e uma
+            // moldura ao redor dela a deixaria parecendo mais um dado numa lista.
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(
-                    modifier = Modifier.padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ResidentPhoto(
-                        photoUrl = resident?.photoUrl,
-                        name = resident?.name.orEmpty()
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = resident?.name ?: "—",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = resident?.roomType?.label ?: "",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
+                ResidentPhoto(
+                    photoUrl = resident?.photoUrl,
+                    name = resident?.name.orEmpty(),
+                    size = 160.dp
+                )
+                Text(
+                    text = resident?.name ?: "—",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
             }
         }
 
@@ -139,19 +129,21 @@ private fun formatBirthday(resident: Resident?): String? {
  * buraco no topo do perfil parece tela quebrada.
  */
 @Composable
-private fun ResidentPhoto(photoUrl: String?, name: String) {
+private fun ResidentPhoto(photoUrl: String?, name: String, size: Dp) {
     val initial = name.trim().firstOrNull()?.uppercase() ?: "?"
 
     Box(
         modifier = Modifier
-            .size(72.dp)
+            .size(size)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceContainerHighest),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = initial,
-            style = MaterialTheme.typography.headlineMedium,
+            // A inicial acompanha o círculo: num monograma de 160dp, uma letra de
+            // tamanho fixo ficaria perdida no meio.
+            style = MaterialTheme.typography.displayMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
