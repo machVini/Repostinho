@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,9 +23,11 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,12 +48,15 @@ import com.mach.apps.repostinho.ui.accentColor
 import com.mach.apps.repostinho.ui.dismissKeyboardOnTap
 import com.mach.apps.repostinho.ui.eventCategoryColor
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarioScreen(
     occurrences: List<EventOccurrence>,
     isShared: Boolean,
     /** O ano da janela da agenda — é nele que um evento novo é cadastrado. */
     year: Int,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     onAddEvent: (RepEvent) -> Unit,
     onRemoveEvent: (eventId: String) -> Unit,
     modifier: Modifier = Modifier
@@ -58,60 +64,66 @@ fun CalendarioScreen(
     var adding by remember { mutableStateOf(false) }
     var removing by remember { mutableStateOf<RepEvent?>(null) }
 
-    LazyColumn(modifier = modifier.fillMaxWidth()) {
-        item {
-            Column(modifier = Modifier.padding(vertical = 16.dp)) {
-                Text(
-                    text = "Eventos da rep",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "O que ainda vem este ano, em ordem.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (!isShared) {
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize()
+    ) {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            item {
+                Column(modifier = Modifier.padding(vertical = 16.dp)) {
                     Text(
-                        text = "Sem conexão — os eventos cadastrados pela rep podem estar " +
-                            "desatualizados.",
+                        text = "Eventos da rep",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "O que ainda vem este ano, em ordem.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(top = 4.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (!isShared) {
+                        Text(
+                            text = "Sem conexão — os eventos cadastrados pela rep podem estar " +
+                                "desatualizados.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            item {
+                Button(
+                    onClick = { adding = true },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                ) {
+                    Text("Adicionar evento")
+                }
+            }
+
+            if (occurrences.isEmpty()) {
+                item {
+                    Text(
+                        text = "Nada marcado daqui até o fim do ano.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 16.dp)
                     )
                 }
             }
-        }
 
-        item {
-            Button(
-                onClick = { adding = true },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-            ) {
-                Text("Adicionar evento")
-            }
-        }
-
-        if (occurrences.isEmpty()) {
-            item {
-                Text(
-                    text = "Nada marcado daqui até o fim do ano.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 16.dp)
+            items(occurrences) { occurrence ->
+                EventCard(
+                    occurrence = occurrence,
+                    onRemove = { removing = occurrence.event }
                 )
             }
-        }
 
-        items(occurrences) { occurrence ->
-            EventCard(
-                occurrence = occurrence,
-                onRemove = { removing = occurrence.event }
-            )
-        }
-
-        item {
-            CategoryLegend(modifier = Modifier.padding(vertical = 16.dp))
+            item {
+                CategoryLegend(modifier = Modifier.padding(vertical = 16.dp))
+            }
         }
     }
 
