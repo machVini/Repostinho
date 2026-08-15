@@ -18,13 +18,21 @@
             height: 100%;
             overflow: hidden;
             overscroll-behavior: none;
-            /* Cor das faixas de área segura, atrás da status bar e do indicador de
-               início. Segue o tema para lerem como extensão da tela, e não como
-               tarja solta. */
-            background: #FFFDF7;
+            /*
+               Cor das faixas de área segura, atrás da status bar e da barra de gestos.
+
+               É a cor da BARRA do app, não a do fundo: as faixas ficam encostadas na
+               toolbar e no menu, então pintá-las igual faz as barras parecerem chegar
+               até a borda da tela — que é como app nativo se comporta. Com a cor do
+               fundo elas viravam duas tarjas soltas.
+
+               Precisa acompanhar barContainerColor() no Theme.kt: RepBlue no claro,
+               NightBar no escuro.
+            */
+            background: #0B63D6;
         }
         @media (prefers-color-scheme: dark) {
-            html, body { background: #131A23; }
+            html, body { background: #16263F; }
         }
 
         /*
@@ -35,9 +43,17 @@
          */
         #composeTarget {
             position: fixed;
+            /*
+               Só o topo é descontado. Era ele que colocava a toolbar debaixo da status
+               bar e a deixava sem receber toque.
+
+               Embaixo o app vai até a borda de propósito: reservar a área da barra de
+               gestos deixava uma faixa parada abaixo do menu, e o menu já ficava
+               confortável sem esse desconto.
+            */
             top: env(safe-area-inset-top, 0px);
             right: env(safe-area-inset-right, 0px);
-            bottom: env(safe-area-inset-bottom, 0px);
+            bottom: 0;
             left: env(safe-area-inset-left, 0px);
         }
         /* Tela de espera enquanto o Wasm baixa: são ~4,7 MB, e um azul chapado sem
