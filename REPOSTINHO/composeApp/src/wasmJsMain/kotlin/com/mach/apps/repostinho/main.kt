@@ -24,6 +24,9 @@ private fun log(message: String) {
 fun main() {
     log("main() iniciou")
     try {
+        // Antes do Koin: o ChoreRepository resolve o fuso de Campinas ao ser construído.
+        log("fusos carregados=" + loadTimeZoneDatabase())
+
         initKoin(cacheDirectory = "repostinho")
 
         val target = document.getElementById("composeTarget") ?: document.body!!

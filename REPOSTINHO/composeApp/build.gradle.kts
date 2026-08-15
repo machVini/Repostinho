@@ -122,6 +122,15 @@ kotlin {
         }
         wasmJsMain.dependencies {
             implementation(libs.ktor.client.js)
+            /*
+             * Banco de fusos horários para o navegador.
+             *
+             * O `kotlinx-datetime` lê os fusos do sistema no JVM e no Native, mas o
+             * navegador não expõe a base IANA — e sem ela `TimeZone.of("America/Sao_Paulo")`
+             * lança na hora de construir o ChoreRepository, derrubando o app inteiro antes
+             * da primeira tela.
+             */
+            implementation(npm("@js-joda/timezone", "2.25.2"))
         }
         commonMain.dependencies {
             implementation(libs.ktor.client.core)
