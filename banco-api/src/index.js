@@ -749,13 +749,23 @@ function corsHeaders(request, env) {
 
   if (permitidas.length > 0 && !permitidas.includes(origin)) return {};
 
+  /*
+   * Os cabeçalhos pedidos são devolvidos como pedidos.
+   *
+   * Uma lista fixa vira caça a cabeçalho: o Coil manda `cache-control` ao buscar a foto do
+   * morador, e o navegador barra a resposta inteira por causa de um item ausente na
+   * lista — com erro que fala de CORS, não de foto. Quem controla o acesso aqui é a
+   * checagem de origem logo acima; refletir o que o cliente pediu não afrouxa isso.
+   */
+  const pedidos = request.headers.get("access-control-request-headers");
+
   return {
     "access-control-allow-origin": origin,
-    "access-control-allow-headers": "authorization, content-type, x-rep-token",
+    "access-control-allow-headers": pedidos || "authorization, content-type, x-rep-token",
     "access-control-allow-methods": "GET, POST, PUT, OPTIONS",
     "access-control-max-age": "86400",
     // A origem entra na resposta, então o cache não pode servir a mesma para outra.
-    vary: "Origin",
+    vary: "Origin, Access-Control-Request-Headers",
   };
 }
 

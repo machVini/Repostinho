@@ -31,6 +31,24 @@ test("preflight passa sem credencial", async () => {
   assert.match(res.headers.get("access-control-allow-headers"), /authorization/);
 });
 
+test("cabeçalho pedido pelo cliente é liberado", async () => {
+  // O Coil manda `cache-control` ao buscar a foto do morador. Com lista fixa, o navegador
+  // barrava a resposta inteira e o perfil ficava sem foto.
+  const req = new Request("https://banco.exemplo.workers.dev/foto/vk", {
+    method: "OPTIONS",
+    headers: {
+      origin: ORIGEM,
+      "access-control-request-method": "GET",
+      "access-control-request-headers": "authorization, cache-control",
+    },
+  });
+  const res = await worker.fetch(req, {}, {});
+
+  const permitidos = res.headers.get("access-control-allow-headers");
+  assert.match(permitidos, /cache-control/);
+  assert.match(permitidos, /authorization/);
+});
+
 test("origem fora da lista não recebe liberação", async () => {
   const env = { ALLOWED_ORIGINS: "https://repostinho.pages.dev" };
   const res = await worker.fetch(preflight("https://site-aleatorio.com"), env, {});
