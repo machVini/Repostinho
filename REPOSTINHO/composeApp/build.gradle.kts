@@ -197,7 +197,21 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            /*
+             * R8 ligado: 91% do APK era dex, e o app usa uma fração do Compose, do Ktor e
+             * do Firebase que carrega junto. O `shrinkResources` vem atrás porque só
+             * funciona com o código já encolhido — é ele que remove o recurso que nenhuma
+             * classe sobrevivente referencia.
+             *
+             * O arquivo de regras é curto de propósito: as bibliotecas publicam as próprias
+             * regras junto do artefato. Ver proguard-rules.pro.
+             */
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             // Sem keystore o build continua funcionando e sai sem assinar, para quem
             // clonar não travar — só não dá para instalar.
             if (keystoreExiste) signingConfig = signingConfigs.getByName("release")
