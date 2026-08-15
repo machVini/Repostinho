@@ -9,9 +9,9 @@ it is, and the constraints that drove each decision. It's written as a portfolio
 as much as documentation.
 
 <p align="center">
-  <img src="docs/screenshots/home.png" width="260" alt="Home screen, showing the current resident's balance, weekly chore, and recent meeting notes" />
+  <img src="docs/screenshots/home.jpeg" width="260" alt="Home screen, showing the current resident's balance, weekly chore, and recent meeting notes" />
   &nbsp;&nbsp;
-  <img src="docs/screenshots/calendario.png" width="260" alt="Calendar screen, showing the house's fixed yearly events in the app's light theme" />
+  <img src="docs/screenshots/calendario.jpeg" width="260" alt="Calendar screen, showing the house's fixed yearly events in the app's light theme" />
 </p>
 
 <p align="center"><sub>Home (dark theme) and Calendar (light theme). Banco and Tarefas
