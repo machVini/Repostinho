@@ -47,6 +47,7 @@ import com.mach.apps.repostinho.ui.barContainerColor
 import com.mach.apps.repostinho.ui.barIndicatorColor
 import com.mach.apps.repostinho.ui.onBarColor
 import com.mach.apps.repostinho.ui.onBarIndicatorColor
+import com.mach.apps.repostinho.ui.paintBrowserChrome
 import org.koin.compose.KoinContext
 import org.koin.compose.koinInject
 
@@ -78,6 +79,11 @@ fun App() {
         val darkTheme = themeMode.isDark(systemDark)
 
         RepostinhoTheme(darkTheme = darkTheme) {
+            // Fica aqui dentro porque `barContainerColor()` lê o tema. Na web é isto que
+            // mantém as faixas de área segura na cor da barra; nos apps nativos, no-op.
+            val barColor = barContainerColor()
+            LaunchedEffect(barColor) { paintBrowserChrome(barColor) }
+
             val loginViewModel = koinInject<LoginViewModel>()
             val residentId by loginViewModel.currentResidentId.collectAsStateWithLifecycle()
             val login by loginViewModel.uiState.collectAsStateWithLifecycle()

@@ -40,7 +40,7 @@ and they ship as a single commit.
 
 ```
 Repostinho/
-├── REPOSTINHO/     Kotlin Multiplatform app (Compose, Android + iOS)
+├── REPOSTINHO/     Kotlin Multiplatform app (Compose, Android + iOS + Web/Wasm)
 └── banco-api/      Cloudflare Worker that turns the spreadsheet into JSON
 ```
 
@@ -91,10 +91,11 @@ time, which mixes two sort criteria in one list — a known, tested edge case
 includes an explicit check to tell those two apart rather than showing residents an
 empty meeting-notes card and no explanation.
 
-**Threat model.** The bearer token is an obstacle, not authentication — it ships inside
-the app binary and can be extracted. Its job is to keep the endpoint from being casually
-scraped and to keep the underlying SharePoint URL out of the client, not to provide real
-access control. Real per-resident auth would be a different project.
+**Threat model.** The app no longer carries a shared secret. It sends the signed Firebase
+token of whoever is logged in, and the Worker verifies it against Google's public keys —
+so extracting the binary yields nothing usable. The old `x-rep-token` survives as an
+administration key for command-line resident registration, held by one person rather than
+distributed across fifteen phones.
 
 Stack: JavaScript, [SheetJS](https://sheetjs.com/) for `.xlsx`/`.xlsm` parsing, deployed
 on Cloudflare Workers. Tests in `test/` cover the date-parsing and cell-extraction logic
@@ -102,23 +103,39 @@ with plain Node — no framework.
 
 ## Client — Kotlin Multiplatform app
 
-One Compose UI, one set of view models and repositories, targeting Android and iOS from
-`commonMain`. Platform-specific code is kept to the minimum the platforms actually force:
-HTTP engine selection (OkHttp on Android, Darwin on iOS) and a single file I/O
-abstraction.
+One Compose UI, one set of view models and repositories, targeting Android, iOS and the
+browser from `commonMain`. Platform-specific code is kept to the minimum the platforms
+actually force: HTTP engine selection (OkHttp, Darwin, JS), storage, and the Firebase SDK.
 
 ```
 composeApp/src/
 ├── commonMain/    UI (Compose), view models, repositories, models, DI (Koin)
+├── mobileMain/    Firebase via the GitLive SDK — shared by Android and iOS only
 ├── androidMain/   Ktor OkHttp engine, Context-scoped cache directory, Application entry
-└── iosMain/       Ktor Darwin engine, iOS file-system cache path, MainViewController
+├── iosMain/       Ktor Darwin engine, iOS file-system cache path, MainViewController
+└── wasmJsMain/    Ktor JS engine, localStorage, Firebase JS SDK bridge, PWA entry point
 ```
 
-**`expect`/`actual` kept to one seam.** Reading and writing a cache file is the only
-thing that genuinely differs per platform — everything else (parsing, state, UI) is
-common code. `TextFileStore` is an `expect fun` factory that returns a plain interface,
-not an `expect class`: expect/actual classes are still Beta in Kotlin and warn on every
-build, so the platform boundary is drawn one level down instead.
+**`expect`/`actual` kept to three seams, each forced by a real platform gap.** Cache
+storage (`TextFileStore` — a file on mobile, `localStorage` in the browser), the platform
+name, and the Firebase provider. Everything else — parsing, state, navigation, every
+screen — is common code.
+
+`TextFileStore` is an `expect fun` factory returning a plain interface rather than an
+`expect class`: expect/actual classes are still Beta in Kotlin and warn on every build,
+so the platform boundary is drawn one level down instead.
+
+**An intermediate source set exists for exactly one dependency.** The GitLive Firebase
+SDK publishes no WebAssembly artifact, so while it sat in `commonMain` no browser target
+could compile at all. `mobileMain` holds it for Android and iOS; the browser implements
+the same three-function seam (`authenticate`, `signOut`, `idToken`) over the Firebase
+JavaScript SDK.
+
+That intermediate level is declared by extending `applyDefaultHierarchyTemplate`, not
+with a manual `dependsOn`. The manual form silently disables the default hierarchy for
+the targets it touches — `iosMain` drops out of the native compilation and every iOS
+`actual` goes missing, with an error that names the `expect` and never mentions the
+source set.
 
 **Stale-then-fresh loading, not spinner-then-content.** `RemoteBankSheetRepository`
 publishes the last known-good response from disk immediately on `init`, tagged
@@ -163,13 +180,12 @@ public, and committing them lets anyone aim sign-in attempts at the house's proj
 free. They sit beside `local.properties` in `.gitignore`; without them the app builds
 with sign-in disabled rather than failing, so a fresh clone still runs.
 
-**Secrets never enter the repository.** The API base URL and bearer token live in a
-gitignored `local.properties`; a Gradle task generates a small `BankApiConfig.kt` at
-build time and injects it into `commonMain`'s source set. With the file absent, the app
-still compiles and runs against bundled placeholder data — cloning the repo never leaves
-a contributor blocked on secrets they don't have. This matters because the repository is
-public: a committed token would be a leaked token, and it's the only thing standing
-between the endpoint and the open internet.
+**Secrets never enter the repository.** The API base URL and the release keystore
+credentials live in a gitignored `local.properties`; a Gradle task generates a small
+`BankApiConfig.kt` at build time and injects it into `commonMain`'s source set. The web
+build has its own equivalent, `firebase-config.js`, also gitignored. With those files
+absent the app still compiles and runs against bundled placeholder data — cloning the
+repo never leaves a contributor blocked on values they don't have.
 
 ```kotlin
 val bankApiProperties = Properties().apply {
@@ -218,7 +234,56 @@ entries are still made in the spreadsheet's own macro-driven form; the app refle
 ledger, it doesn't edit it.
 
 Stack: Kotlin Multiplatform, Compose Multiplatform (Material 3), Ktor client
-(OkHttp/Darwin engines), kotlinx.serialization, Koin, AndroidX ViewModel/Lifecycle.
+(OkHttp/Darwin/JS engines), kotlinx.serialization, Koin, AndroidX ViewModel/Lifecycle.
+
+## The third target — a PWA, for $99 reasons
+
+Putting the app on the residents' iPhones costs US$ 99 a year through the Apple Developer
+Program, or re-signing every build every seven days with a free account. For a fifteen-
+person house app that neither ships to a store nor earns anything, both are the wrong
+price. The same Compose UI compiles to WebAssembly and installs from Safari's
+*Add to Home Screen* instead.
+
+Nothing about the UI changed to make this work. What it cost was the intermediate source
+set above, an HTTP engine, two `actual` implementations, and the tail below.
+
+**Storage is `localStorage`, and Safari will delete it.** WebKit evicts site data after
+roughly a week of non-use. Everything cached is a copy of what `banco-api` already holds,
+so nothing is lost — but the session lives there too, which means a resident who skips a
+couple of weeks signs in again. Acceptable; worth knowing before someone reports it as a
+bug.
+
+**Timezones don't exist in a browser.** `kotlinx-datetime` reads the IANA database from
+the OS on JVM and Native. The browser exposes nothing, so `TimeZone.of("America/Sao_Paulo")`
+throws — and because the chore rotation resolves that timezone in a constructor, Koin
+failed there and the whole app died before rendering. Declaring the `@js-joda/timezone`
+npm dependency isn't enough: nothing imports it, and webpack won't bundle a module no one
+references. It needs an explicit `@JsModule` declaration, kept alive against dead-code
+elimination. The tell was the bundle size not moving — an entire timezone database
+doesn't arrive without showing up on the scale.
+
+**CORS had to be added to the Worker, and the preflight is the trap.** A native client
+ignores origins; a browser does not. The Worker verified its token *before* routing, so
+the preflight — which arrives with no credentials by design — got a `401`, and the browser
+cancelled the real request before it was ever sent. Nothing appears in the server log,
+because nothing reached the server. `OPTIONS` now answers ahead of authentication.
+
+The allow-list of request headers is reflected back rather than enumerated. A fixed list
+turns into whack-a-mole: Coil sends `cache-control` when fetching a resident's photo, and
+one missing entry blocks the whole response with an error that talks about CORS rather
+than about photos. The origin check is what actually gates access.
+
+**Two rendering facts that cost hours.** Compose attaches its canvas on the first frame,
+so in a background tab — where `requestAnimationFrame` never fires — the page stays blank
+with no error at all, which looks exactly like a broken build. And Kotlin 2.3.20's
+incremental compilation for Wasm crashes on every source edit, so each rebuild starts by
+clearing the Wasm build directories.
+
+The bundle is ~4.7 MB over the wire, most of it Skia rather than application code — a
+fixed cost that doesn't grow with the app. A service worker caches the content-hashed
+`.wasm` files aggressively and everything else network-first, so a published update
+actually reaches people who already opened the app. See [`docs/pwa.md`](docs/pwa.md) for
+the deploy runbook.
 
 ## Data flow, end to end
 
@@ -247,10 +312,15 @@ cd banco-api
 npm install
 wrangler dev
 
-# App (compiles both targets, runs common + platform tests)
+# App (compiles all three targets, runs common + platform tests)
 cd REPOSTINHO
 ./gradlew :composeApp:compileKotlinIosSimulatorArm64 :composeApp:testDebugUnitTest
+./gradlew :composeApp:wasmJsBrowserDistribution
 ```
+
+Editing anything under `wasmJsMain` needs the Wasm build directories cleared first —
+Kotlin 2.3.20 crashes on incremental compilation for that target. It affects the build
+loop only, never the published artifact.
 
 The app builds and runs without any secrets configured — it just falls back to bundled
 placeholder data instead of live numbers. See [`banco-api/README.md`](banco-api/README.md)
@@ -265,3 +335,8 @@ of a cross-platform framework like React Native or Flutter. Cloudflare Workers g
 zero-maintenance, effectively free home for the one piece of logic (`.xlsx` parsing)
 that had no reasonable answer on-device — no server to patch, no container to keep
 warm, deployed with a single `wrangler deploy`.
+
+The web target is where that bet paid off most concretely. A third platform arrived
+without a second UI codebase, a second set of view models, or a second definition of what
+a balance is — the parts that would have had to be written twice in any stack where the
+app and the web app are different projects.

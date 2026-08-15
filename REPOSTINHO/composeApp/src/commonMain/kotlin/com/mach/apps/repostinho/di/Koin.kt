@@ -9,9 +9,11 @@ import com.mach.apps.repostinho.data.local.RotationPreferenceStore
 import com.mach.apps.repostinho.data.local.ThemePreferenceStore
 import com.mach.apps.repostinho.data.local.textFileStore
 import com.mach.apps.repostinho.data.repository.AuthProvider
+import com.mach.apps.repostinho.data.repository.platformAuthProvider
+import com.mach.apps.repostinho.data.repository.platformAuthTokenProvider
 import com.mach.apps.repostinho.data.repository.AuthRepository
-import com.mach.apps.repostinho.data.repository.FirebaseAuthProvider
-import com.mach.apps.repostinho.data.repository.FirebaseTokens
+
+
 import com.mach.apps.repostinho.data.repository.BankSheetRepository
 import com.mach.apps.repostinho.data.repository.ResidentAuthRepository
 import com.mach.apps.repostinho.data.repository.ChoreRepository
@@ -54,7 +56,7 @@ fun appModule(cacheDirectory: String) = module {
     // O banco vem da planilha da rep, convertida em JSON pelo banco-api, e a última
     // resposta boa fica em disco para as aberturas sem rede.
     single { BankApi.defaultClient() }
-    single<AuthTokenProvider> { FirebaseTokens() }
+    single<AuthTokenProvider> { platformAuthTokenProvider() }
     single { BankApi(get(), get()) }
     single { BankSheetCache(textFileStore(cacheDirectory)) }
     single<BankSheetRepository> { RemoteBankSheetRepository(get(), get()) }
@@ -69,7 +71,7 @@ fun appModule(cacheDirectory: String) = module {
     // Quem entra no app. O provedor é a única peça que o Firebase substitui — o resto
     // do login (casar com o morador, guardar a sessão) não muda com ele.
     single { SessionStore(textFileStore(cacheDirectory)) }
-    single<AuthProvider> { FirebaseAuthProvider() }
+    single<AuthProvider> { platformAuthProvider() }
     single<AuthRepository> { ResidentAuthRepository(get(), get(), get()) }
 
     // ViewModel (no KMP usamos o Compose ViewModel ou bibliotecas como Voyager/Decompose)

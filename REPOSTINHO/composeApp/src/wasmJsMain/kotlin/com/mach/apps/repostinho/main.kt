@@ -1,0 +1,54 @@
+package com.mach.apps.repostinho
+
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.window.ComposeViewport
+import com.mach.apps.repostinho.di.initKoin
+import kotlinx.browser.document
+
+/** No Kotlin/Wasm o `println` sai no console do navegador. */
+private fun log(message: String) {
+    println("[repostinho] $message")
+}
+
+private var loadingHidden = false
+
+/** Idempotente: a composição roda muitas vezes, o DOM só precisa ser tocado uma. */
+private fun hideLoadingScreen() {
+    if (loadingHidden) return
+    loadingHidden = true
+    document.getElementById("loading")?.remove()
+    log("aviso de carregamento removido")
+}
+
+/**
+ * Entrada do app na web.
+ *
+ * O "diretório" de cache aqui é só um prefixo de chave no `localStorage` — no navegador
+ * não existe caminho de arquivo, mas a assinatura é comum às três plataformas.
+ *
+ * Nota de depuração: o Compose só anexa o canvas no primeiro frame. Numa aba oculta o
+ * `requestAnimationFrame` não dispara, e a tela fica vazia sem erro nenhum — o que parece
+ * app quebrado, mas é só a aba não estar em primeiro plano.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+fun main() {
+    log("main() iniciou")
+    try {
+        // Antes do Koin: o ChoreRepository resolve o fuso de Campinas ao ser construído.
+        log("fusos carregados=" + loadTimeZoneDatabase())
+
+        initKoin(cacheDirectory = "repostinho")
+
+        val target = document.getElementById("composeTarget") ?: document.body!!
+        ComposeViewport(target) {
+            // Tirar o aviso daqui, e não por observação do DOM, torna o momento
+            // determinístico: quando isto roda, a composição começou de fato.
+            hideLoadingScreen()
+            App()
+        }
+        log("montado em ${target.tagName}")
+    } catch (e: Throwable) {
+        log("FALHOU: ${e::class.simpleName} -> ${e.message}")
+        throw e
+    }
+}

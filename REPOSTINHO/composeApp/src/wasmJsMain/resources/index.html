@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="theme-color" content="#0B63D6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Repostinho">
+    <title>República Postinho</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" href="icon-192.png">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            overscroll-behavior: none;
+            /*
+               Cor das faixas de área segura, atrás da status bar e da barra de gestos.
+
+               É a cor da BARRA do app, não a do fundo: as faixas ficam encostadas na
+               toolbar e no menu, então pintá-las igual faz as barras parecerem chegar
+               até a borda da tela — que é como app nativo se comporta. Com a cor do
+               fundo elas viravam duas tarjas soltas.
+
+               Quem manda no valor é o Compose: o `--bar-color` chega de
+               paintBrowserChrome() com o que o barContainerColor() resolveu. Os literais
+               aqui são só o palpite de enquanto o Wasm baixa — o tema é escolha do
+               morador, e `prefers-color-scheme` só sabe a do sistema.
+            */
+            background: var(--bar-color, #0B63D6);
+        }
+        @media (prefers-color-scheme: dark) {
+            html, body { background: var(--bar-color, #16263F); }
+        }
+
+        /*
+         * O Compose desenha num canvas e não conhece as áreas seguras do sistema: se o
+         * container for a tela inteira, a toolbar fica debaixo da status bar e deixa de
+         * receber toque. Posicionar por `inset` faz o elemento ocupar exatamente a área
+         * utilizável, e o Compose recebe esse tamanho já descontado.
+         */
+        #composeTarget {
+            position: fixed;
+            /*
+               Em cima, a área segura e nada mais — é onde o app nativo começa a toolbar.
+
+               Já teve um `+ 16px` de folga aqui, e ele passava despercebido enquanto a
+               faixa era pintada pelo tema do sistema: a borda de cor caía na área segura e
+               os 16px extras se somavam à toolbar sem se distinguir dela. Com a faixa na
+               cor da barra, os dois viraram um bloco só, e o bloco ficava mais alto que o
+               do nativo.
+            */
+            top: env(safe-area-inset-top, 0px);
+            right: env(safe-area-inset-right, 0px);
+            /*
+               Embaixo o desconto é parcial.
+
+               O rodapé já ficou em `0`, quando reservar a barra de gestos parecia deixar
+               uma faixa parada abaixo do menu. A faixa não era daqui: era o canvas ficando
+               com a altura antiga, o que o ResizeObserver lá embaixo resolve. Descontada
+               a faixa, sobra o desconto de verdade — e a área segura inteira dá um vão
+               maior do que o menu pede.
+
+               O `- 12px` é o único número a mexer: em `0px` o menu volta a encostar na
+               borda, e sem o subtraendo fica a área segura cheia, que é o que o app
+               nativo reserva. O `max` existe para quem não tem barra de gestos: com
+               `env` em zero, subtrair daria negativo e o menu sairia da tela.
+            */
+            bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) - 12px));
+            left: env(safe-area-inset-left, 0px);
+        }
+        /* Tela de espera enquanto o Wasm baixa: são ~4,7 MB, e um azul chapado sem
+           explicação parece app travado. */
+        #loading {
+            position: fixed;
+            inset: 0;
+            /* Fundo próprio: o do body passou a seguir o tema, e amarelo sobre creme
+               não se lê. Aqui o azul do brasão vale nos dois temas, como na splash.
+
+               Sem z-index de propósito: o #composeTarget vem depois no DOM e pinta por
+               cima sozinho. Com z-index, uma falha em remover este aviso deixava de ser
+               cosmética e passava a esconder o app inteiro. */
+            background: #0B63D6;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+            color: #FFC400;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-weight: bold;
+            text-align: center;
+        }
+        #loading img { width: 96px; height: 96px; border-radius: 24px; }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <img src="icon-192.png" alt="">
+        <div>Carregando…</div>
+    </div>
+    <div id="composeTarget"></div>
+
+    <!--
+        Ponte para o Firebase.
+
+        O SDK do GitLive, que o Android e o iOS usam, não publica artefato Wasm — então na
+        web o login passa pelo SDK JavaScript, e o Kotlin fala com ele por estas três
+        funções em `globalThis.repostinhoAuth`.
+
+        A configuração fica fora daqui, em firebase-config.js, que é gitignored: são as
+        chaves do SEU projeto. Elas não são segredo (o Firebase web expõe a apiKey de
+        propósito, e quem protege os dados são as regras e o banco-api), mas também não
+        têm por que estar no repositório.
+    -->
+    <script src="firebase-config.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import {
+            getAuth,
+            signInWithEmailAndPassword,
+            signOut,
+            setPersistence,
+            browserLocalPersistence,
+        } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+
+        const config = globalThis.repostinhoFirebaseConfig;
+        if (!config) {
+            console.error("[repostinho] firebase-config.js ausente: o login não vai funcionar");
+        } else {
+            const auth = getAuth(initializeApp(config));
+
+            /*
+             * A ponte é publicada antes de qualquer `await`.
+             *
+             * Ela estava depois do setPersistence, e isso era frágil: um `await` que lança
+             * aborta o módulo inteiro, então uma falha ao restaurar a sessão deixava
+             * `repostinhoAuth` indefinido — e aí não é a persistência que quebra, é o
+             * login, que passa a não existir.
+             */
+            globalThis.repostinhoAuth = {
+                signIn: (email, password) => signInWithEmailAndPassword(auth, email, password),
+                signOut: () => signOut(auth),
+                idToken: async () => {
+                    // `false` usa o token em cache e só renova perto de vencer — mesma
+                    // escolha do FirebaseTokens no Android e no iOS.
+                    const user = auth.currentUser;
+                    return user ? await user.getIdToken(false) : null;
+                },
+            };
+
+            // Sem isto a sessão morre ao fechar a aba. Falhar aqui custa um login a mais,
+            // não o acesso — por isso não derruba nada.
+            setPersistence(auth, browserLocalPersistence).catch((e) => {
+                console.warn("[repostinho] persistência local indisponível:", e);
+            });
+        }
+    </script>
+
+    <script type="application/javascript" src="composeApp.js"></script>
+    <script type="application/javascript">
+        /*
+         * Mantém o canvas do tamanho do container.
+         *
+         * O Compose mede o #composeTarget uma vez, na montagem, e só refaz a conta quando
+         * a JANELA dispara `resize` — ele não observa o elemento. No PWA a área útil ainda
+         * cresce depois disso (o sistema passa a desenhar as barras por cima do app, e é aí
+         * que a área segura entra em vigor): o container acompanha, porque está preso por
+         * `bottom: 0`, e o canvas fica com a altura de antes. A diferença é a faixa parada
+         * embaixo do menu — fundo do body, não app.
+         *
+         * Um ResizeObserver devolve o aviso que falta. O `resize` sintético é só um gatilho:
+         * quem lê o tamanho novo, e do container, é o próprio Compose.
+         */
+        (() => {
+            const alvo = document.getElementById('composeTarget');
+            // Guarda a última medida para não disparar em mudança que não houve: o
+            // observer também avisa uma vez logo ao começar a observar, e o
+            // visualViewport se mexe em coisa que não muda o container (o teclado).
+            let largura = alvo.clientWidth;
+            let altura = alvo.clientHeight;
+            const sincronizar = () => {
+                if (alvo.clientWidth === largura && alvo.clientHeight === altura) return;
+                largura = alvo.clientWidth;
+                altura = alvo.clientHeight;
+                window.dispatchEvent(new Event('resize'));
+            };
+
+            new ResizeObserver(sincronizar).observe(alvo);
+            // Reforço: o callback do ResizeObserver só é entregue quando a página está
+            // desenhando. Se a área útil crescer com o app em segundo plano, este evento
+            // chega assim mesmo — e a checagem de tamanho evita o trabalho repetido.
+            window.visualViewport?.addEventListener('resize', sincronizar);
+        })();
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .catch(e => console.warn('[repostinho] service worker falhou:', e));
+            });
+        }
+    </script>
+</body>
+</html>

@@ -75,8 +75,39 @@ kotlin {
             isStatic = true
         }
     }
-    
+
+    // Alvo web para o PWA. O binário sai em build/dist/wasmJs/productionExecutable.
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+        binaries.executable()
+    }
+
+    /*
+     * Android e iOS compartilham o que o navegador não alcança — hoje, o Firebase do
+     * GitLive, que não publica artefato Wasm. Sem este nível, `commonMain` não compilaria
+     * para web.
+     *
+     * Feito estendendo o template em vez de `dependsOn` na mão: o `dependsOn` manual
+     * desliga a hierarquia padrão para os alvos tocados, e o `iosMain` some da compilação
+     * nativa — os `actual` de iOS deixam de ser encontrados.
+     */
+    applyDefaultHierarchyTemplate {
+        common {
+            group("mobile") {
+                withAndroidTarget()
+                withIos()
+            }
+        }
+    }
+
     sourceSets {
+        val mobileMain by getting {
+            dependencies {
+                implementation(libs.firebase.auth)
+            }
+        }
+
         commonMain {
             kotlin.srcDir(generateBankApiConfig.map { it.outputs.files.singleFile })
         }
@@ -89,6 +120,18 @@ kotlin {
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
         }
+        wasmJsMain.dependencies {
+            implementation(libs.ktor.client.js)
+            /*
+             * Banco de fusos horários para o navegador.
+             *
+             * O `kotlinx-datetime` lê os fusos do sistema no JVM e no Native, mas o
+             * navegador não expõe a base IANA — e sem ela `TimeZone.of("America/Sao_Paulo")`
+             * lança na hora de construir o ChoreRepository, derrubando o app inteiro antes
+             * da primeira tela.
+             */
+            implementation(npm("@js-joda/timezone", "2.25.2"))
+        }
         commonMain.dependencies {
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.contentNegotiation)
@@ -96,7 +139,6 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.coil.compose)
             implementation(libs.coil.networkKtor)
-            implementation(libs.firebase.auth)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)

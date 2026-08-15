@@ -2,7 +2,7 @@ package com.mach.apps.repostinho.ui
 
 import coil3.ImageLoader
 import coil3.PlatformContext
-import coil3.network.ktor2.KtorNetworkFetcherFactory
+import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.CachePolicy
 import coil3.request.crossfade
 import com.mach.apps.repostinho.data.remote.AuthTokenProvider
