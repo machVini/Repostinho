@@ -45,9 +45,16 @@
          */
         #composeTarget {
             position: fixed;
-            /* O `+ 16px` é folga de respiro, além da área segura. É o único número a
-               mexer se a toolbar parecer alta ou baixa demais. */
-            top: calc(env(safe-area-inset-top, 0px) + 16px);
+            /*
+               Em cima, a área segura e nada mais — é onde o app nativo começa a toolbar.
+
+               Já teve um `+ 16px` de folga aqui, e ele passava despercebido enquanto a
+               faixa era pintada pelo tema do sistema: a borda de cor caía na área segura e
+               os 16px extras se somavam à toolbar sem se distinguir dela. Com a faixa na
+               cor da barra, os dois viraram um bloco só, e o bloco ficava mais alto que o
+               do nativo.
+            */
+            top: env(safe-area-inset-top, 0px);
             right: env(safe-area-inset-right, 0px);
             /*
                Embaixo o desconto é parcial.
