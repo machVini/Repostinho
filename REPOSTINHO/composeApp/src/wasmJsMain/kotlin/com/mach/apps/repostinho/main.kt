@@ -10,6 +10,16 @@ private fun log(message: String) {
     println("[repostinho] $message")
 }
 
+private var loadingHidden = false
+
+/** Idempotente: a composição roda muitas vezes, o DOM só precisa ser tocado uma. */
+private fun hideLoadingScreen() {
+    if (loadingHidden) return
+    loadingHidden = true
+    document.getElementById("loading")?.remove()
+    log("aviso de carregamento removido")
+}
+
 /**
  * Entrada do app na web.
  *
@@ -31,6 +41,9 @@ fun main() {
 
         val target = document.getElementById("composeTarget") ?: document.body!!
         ComposeViewport(target) {
+            // Tirar o aviso daqui, e não por observação do DOM, torna o momento
+            // determinístico: quando isto roda, a composição começou de fato.
+            hideLoadingScreen()
             App()
         }
         log("montado em ${target.tagName}")

@@ -46,9 +46,12 @@
             position: fixed;
             inset: 0;
             /* Fundo próprio: o do body passou a seguir o tema, e amarelo sobre creme
-               não se lê. Aqui o azul do brasão vale nos dois temas, como na splash. */
+               não se lê. Aqui o azul do brasão vale nos dois temas, como na splash.
+
+               Sem z-index de propósito: o #composeTarget vem depois no DOM e pinta por
+               cima sozinho. Com z-index, uma falha em remover este aviso deixava de ser
+               cosmética e passava a esconder o app inteiro. */
             background: #0B63D6;
-            z-index: 10;
             display: flex;
             flex-direction: column;
             gap: 12px;
