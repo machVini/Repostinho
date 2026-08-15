@@ -97,9 +97,15 @@
             console.error("[repostinho] firebase-config.js ausente: o login não vai funcionar");
         } else {
             const auth = getAuth(initializeApp(config));
-            // Sem isto a sessão morre ao fechar a aba, e o morador loga toda vez.
-            await setPersistence(auth, browserLocalPersistence);
 
+            /*
+             * A ponte é publicada antes de qualquer `await`.
+             *
+             * Ela estava depois do setPersistence, e isso era frágil: um `await` que lança
+             * aborta o módulo inteiro, então uma falha ao restaurar a sessão deixava
+             * `repostinhoAuth` indefinido — e aí não é a persistência que quebra, é o
+             * login, que passa a não existir.
+             */
             globalThis.repostinhoAuth = {
                 signIn: (email, password) => signInWithEmailAndPassword(auth, email, password),
                 signOut: () => signOut(auth),
@@ -110,6 +116,12 @@
                     return user ? await user.getIdToken(false) : null;
                 },
             };
+
+            // Sem isto a sessão morre ao fechar a aba. Falhar aqui custa um login a mais,
+            // não o acesso — por isso não derruba nada.
+            setPersistence(auth, browserLocalPersistence).catch((e) => {
+                console.warn("[repostinho] persistência local indisponível:", e);
+            });
         }
     </script>
 
