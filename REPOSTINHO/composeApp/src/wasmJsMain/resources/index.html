@@ -26,13 +26,15 @@
                até a borda da tela — que é como app nativo se comporta. Com a cor do
                fundo elas viravam duas tarjas soltas.
 
-               Precisa acompanhar barContainerColor() no Theme.kt: RepBlue no claro,
-               NightBar no escuro.
+               Quem manda no valor é o Compose: o `--bar-color` chega de
+               paintBrowserChrome() com o que o barContainerColor() resolveu. Os literais
+               aqui são só o palpite de enquanto o Wasm baixa — o tema é escolha do
+               morador, e `prefers-color-scheme` só sabe a do sistema.
             */
-            background: #0B63D6;
+            background: var(--bar-color, #0B63D6);
         }
         @media (prefers-color-scheme: dark) {
-            html, body { background: #16263F; }
+            html, body { background: var(--bar-color, #16263F); }
         }
 
         /*
@@ -43,17 +45,25 @@
          */
         #composeTarget {
             position: fixed;
-            /*
-               Só o topo é descontado. Era ele que colocava a toolbar debaixo da status
-               bar e a deixava sem receber toque.
-
-               Embaixo o app vai até a borda de propósito: reservar a área da barra de
-               gestos deixava uma faixa parada abaixo do menu, e o menu já ficava
-               confortável sem esse desconto.
-            */
-            top: env(safe-area-inset-top, 0px);
+            /* O `+ 16px` é folga de respiro, além da área segura. É o único número a
+               mexer se a toolbar parecer alta ou baixa demais. */
+            top: calc(env(safe-area-inset-top, 0px) + 16px);
             right: env(safe-area-inset-right, 0px);
-            bottom: 0;
+            /*
+               Embaixo o desconto é parcial.
+
+               O rodapé já ficou em `0`, quando reservar a barra de gestos parecia deixar
+               uma faixa parada abaixo do menu. A faixa não era daqui: era o canvas ficando
+               com a altura antiga, o que o ResizeObserver lá embaixo resolve. Descontada
+               a faixa, sobra o desconto de verdade — e a área segura inteira dá um vão
+               maior do que o menu pede.
+
+               O `- 12px` é o único número a mexer: em `0px` o menu volta a encostar na
+               borda, e sem o subtraendo fica a área segura cheia, que é o que o app
+               nativo reserva. O `max` existe para quem não tem barra de gestos: com
+               `env` em zero, subtrair daria negativo e o menu sairia da tela.
+            */
+            bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) - 12px));
             left: env(safe-area-inset-left, 0px);
         }
         /* Tela de espera enquanto o Wasm baixa: são ~4,7 MB, e um azul chapado sem
@@ -146,14 +156,39 @@
 
     <script type="application/javascript" src="composeApp.js"></script>
     <script type="application/javascript">
-        // O Compose só anexa o canvas no primeiro frame; até lá o aviso continua.
-        const observer = new MutationObserver(() => {
-            if (document.querySelector('canvas')) {
-                document.getElementById('loading')?.remove();
-                observer.disconnect();
-            }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
+        /*
+         * Mantém o canvas do tamanho do container.
+         *
+         * O Compose mede o #composeTarget uma vez, na montagem, e só refaz a conta quando
+         * a JANELA dispara `resize` — ele não observa o elemento. No PWA a área útil ainda
+         * cresce depois disso (o sistema passa a desenhar as barras por cima do app, e é aí
+         * que a área segura entra em vigor): o container acompanha, porque está preso por
+         * `bottom: 0`, e o canvas fica com a altura de antes. A diferença é a faixa parada
+         * embaixo do menu — fundo do body, não app.
+         *
+         * Um ResizeObserver devolve o aviso que falta. O `resize` sintético é só um gatilho:
+         * quem lê o tamanho novo, e do container, é o próprio Compose.
+         */
+        (() => {
+            const alvo = document.getElementById('composeTarget');
+            // Guarda a última medida para não disparar em mudança que não houve: o
+            // observer também avisa uma vez logo ao começar a observar, e o
+            // visualViewport se mexe em coisa que não muda o container (o teclado).
+            let largura = alvo.clientWidth;
+            let altura = alvo.clientHeight;
+            const sincronizar = () => {
+                if (alvo.clientWidth === largura && alvo.clientHeight === altura) return;
+                largura = alvo.clientWidth;
+                altura = alvo.clientHeight;
+                window.dispatchEvent(new Event('resize'));
+            };
+
+            new ResizeObserver(sincronizar).observe(alvo);
+            // Reforço: o callback do ResizeObserver só é entregue quando a página está
+            // desenhando. Se a área útil crescer com o app em segundo plano, este evento
+            // chega assim mesmo — e a checagem de tamanho evita o trabalho repetido.
+            window.visualViewport?.addEventListener('resize', sincronizar);
+        })();
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
