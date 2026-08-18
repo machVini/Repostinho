@@ -3,6 +3,7 @@ package com.mach.apps.repostinho
 import com.mach.apps.repostinho.data.model.MovementType
 import com.mach.apps.repostinho.data.remote.LancamentoDraft
 import com.mach.apps.repostinho.data.remote.LancamentoForm
+import com.mach.apps.repostinho.presentation.nomesDoColetivo
 import com.mach.apps.repostinho.presentation.parseBrlToCents
 import com.mach.apps.repostinho.presentation.parseWeight
 import com.mach.apps.repostinho.presentation.sortedByNome
@@ -160,5 +161,47 @@ class LancamentoFormTest {
         val url = urlOf(description = "Mercado do mês", weights = todos)
 
         assertTrue(url.length < 2000, "URL ficou com ${url.length} caracteres")
+    }
+}
+
+/**
+ * O rateio que o "Coletivo" preenche sozinho.
+ *
+ * O caso que importa é a diferença entre "morador" e "nome na planilha": ela guarda quem
+ * saiu com conta em aberto e os agregados na mesma tabela dos moradores, e essa gente não
+ * divide a compra do mercado desta semana.
+ */
+class ColetivoTest {
+
+    // Como chegam na tela: a planilha conhece ex-morador e agregado, o cadastro só quem
+    // mora aqui hoje.
+    private val elegiveis = listOf("Anaju", "Benê", "Gu", "Lameu", "Picasso", "VK")
+    private val ativos = listOf("Gu", "Lameu", "VK")
+
+    @Test
+    fun soEntraQuemMoraNaRepHoje() {
+        assertEquals(listOf("Gu", "Lameu", "VK"), nomesDoColetivo(elegiveis, ativos))
+    }
+
+    @Test
+    fun exMoradorComSaldoEmAbertoFicaDeFora() {
+        // Picasso continua na primeira tabela da planilha até acertar as contas.
+        assertFalse("Picasso" in nomesDoColetivo(elegiveis, ativos))
+    }
+
+    @Test
+    fun moradorSemCampoNoFormsNaoEntra() {
+        // `elegiveis` já vem filtrado pelo Forms. Um peso para quem não tem campo lá não
+        // teria onde ser preenchido, e sairia do rateio em silêncio.
+        val semCampo = ativos + "Fulano"
+        assertEquals(listOf("Gu", "Lameu", "VK"), nomesDoColetivo(elegiveis, semCampo))
+    }
+
+    @Test
+    fun mantemAOrdemAlfabeticaDaLista() {
+        // As linhas do rateio saem na ordem de `elegiveis`; ordenar de novo aqui faria a
+        // lista pular de lugar quando o tipo fosse escolhido.
+        val fora = listOf("VK", "Gu", "Lameu")
+        assertEquals(listOf("Gu", "Lameu", "VK"), nomesDoColetivo(elegiveis, fora))
     }
 }

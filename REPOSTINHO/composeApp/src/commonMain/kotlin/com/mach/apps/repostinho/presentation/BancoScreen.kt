@@ -38,6 +38,8 @@ fun BancoScreen(
     balances: List<MemberBalance>,
     movements: List<Movement>,
     caixinha: List<CaixinhaLine>,
+    /** Quem mora na rep hoje, pelo nome da planilha. É o rateio padrão do "Coletivo". */
+    activeMemberNames: List<String>,
     currentMemberName: String,
     syncState: SyncState,
     isRefreshing: Boolean,
@@ -98,6 +100,7 @@ fun BancoScreen(
                     // colunas da planilha. Ex-morador entra na lista porque ainda aparece
                     // em lançamento antigo.
                     residentNames = balances.map { it.name },
+                    activeMemberNames = activeMemberNames,
                     currentMemberName = currentMemberName,
                     modifier = content
                 )

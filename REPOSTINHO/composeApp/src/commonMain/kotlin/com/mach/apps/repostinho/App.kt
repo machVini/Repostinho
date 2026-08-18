@@ -239,6 +239,12 @@ fun App() {
                             balances = sheet.balances,
                             movements = sheet.movements,
                             caixinha = sheet.caixinha,
+                            // Do cadastro, e não dos saldos: a planilha guarda na mesma
+                            // tabela quem saiu com conta em aberto e os agregados, e eles
+                            // não dividem a despesa coletiva de hoje.
+                            activeMemberNames = state.residents
+                                .filter { it.isActive }
+                                .map { it.bankName },
                             currentMemberName = sheet.currentMemberName,
                             syncState = sheet.syncState,
                             isRefreshing = sheet.isRefreshing,

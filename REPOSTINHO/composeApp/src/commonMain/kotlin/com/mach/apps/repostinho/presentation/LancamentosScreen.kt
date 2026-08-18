@@ -49,6 +49,7 @@ import com.mach.apps.repostinho.ui.rememberMenuToggle
 fun LancamentosScreen(
     movements: List<Movement>,
     residentNames: List<String>,
+    activeMemberNames: List<String>,
     currentMemberName: String,
     modifier: Modifier = Modifier
 ) {
@@ -185,6 +186,7 @@ fun LancamentosScreen(
     if (lancando) {
         LancamentoDialog(
             participants = residentNames,
+            activeMemberNames = activeMemberNames,
             currentMemberName = currentMemberName,
             onDismiss = { lancando = false },
             onOpenForm = { uriHandler.openUri(it) }

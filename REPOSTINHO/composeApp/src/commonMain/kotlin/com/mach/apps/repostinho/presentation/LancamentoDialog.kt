@@ -56,6 +56,8 @@ import com.mach.apps.repostinho.ui.rememberMenuToggle
 fun LancamentoDialog(
     /** Os nomes que a planilha conhece, vindos do `/banco`. */
     participants: List<String>,
+    /** Quem mora na rep hoje, pelo nome da planilha. Vem do cadastro, não do `/banco`. */
+    activeMemberNames: List<String>,
     currentMemberName: String,
     onDismiss: () -> Unit,
     onOpenForm: (url: String) -> Unit
@@ -73,6 +75,12 @@ fun LancamentoDialog(
         participants.filter { it in LancamentoForm.nomesConhecidos }.sortedByNome()
     }
 
+    // Quem o "Coletivo" preenche sozinho. Fica ao lado de `elegiveis` porque sai dele:
+    // peso para quem não tem campo no Forms não teria onde ser preenchido.
+    val doColetivo = remember(elegiveis, activeMemberNames) {
+        nomesDoColetivo(elegiveis, activeMemberNames)
+    }
+
     // Caixas nas pontas e pessoas em ordem alfabética no meio: misturar "Caix. Crédito"
     // entre os nomes esconderia justamente as três opções que não são gente.
     val pagadores = remember {
@@ -84,6 +92,13 @@ fun LancamentoDialog(
     // Nome -> peso como o morador digitou. Texto, e não Double, porque "0," no meio da
     // digitação não é número mas também não pode apagar o que a pessoa escreveu.
     val pesos = remember { mutableStateMapOf<String, String>() }
+
+    // O que o "Coletivo" pôs sozinho, para saber o que tirar quando o tipo mudar. Quem
+    // foi adicionado à mão não entra aqui e sobrevive à troca de tipo.
+    //
+    // Set comum, e não estado observável: só o clique do chip lê e escreve, e nada na
+    // tela é desenhado a partir dele.
+    val doColetivoAuto = remember { mutableSetOf<String>() }
 
     val cents = parseBrlToCents(value)
     // Entrada não tem rateio: é dinheiro chegando, e a planilha espera peso nenhum.
@@ -140,7 +155,29 @@ fun LancamentoDialog(
                     MovementType.entries.forEach { option ->
                         FilterChip(
                             selected = option == type,
-                            onClick = { type = option },
+                            onClick = {
+                                if (option == MovementType.COLETIVO) {
+                                    // Coletivo é despesa da rep inteira, e o rateio dele
+                                    // é sempre todo mundo em peso 1 — deixar isso para a
+                                    // mão são catorze toques antes de cada mercado. Quem
+                                    // já tinha peso fica como está: o que foi digitado
+                                    // vale mais do que o padrão.
+                                    doColetivo.forEach { nome ->
+                                        if (nome !in pesos) {
+                                            pesos[nome] = "1"
+                                            doColetivoAuto += nome
+                                        }
+                                    }
+                                } else {
+                                    // Sair do coletivo desfaz o que ele pôs. Um privado
+                                    // com a rep inteira no rateio é o erro caro deste
+                                    // dialog, e ele passaria escondido embaixo de catorze
+                                    // linhas que ninguém pediu.
+                                    doColetivoAuto.forEach { pesos.remove(it) }
+                                    doColetivoAuto.clear()
+                                }
+                                type = option
+                            },
                             label = { Text(rotulo(option)) }
                         )
                     }
@@ -179,11 +216,15 @@ fun LancamentoDialog(
                                 onSelect = { pesos[it] = "1" }
                             )
                         }
+                        // Os moradores de hoje, e não os 25 nomes da planilha: "Todos"
+                        // ali dentro traria ex-morador e agregado para dividir a conta.
+                        // Quem precisa de alguém de fora usa o seletor ao lado, um a um.
+                        val faltamMoradores = doColetivo.filterNot { it in pesos }
                         OutlinedButton(
-                            onClick = { elegiveis.forEach { pesos[it] = "1" } },
-                            enabled = disponiveis.isNotEmpty()
+                            onClick = { faltamMoradores.forEach { pesos[it] = "1" } },
+                            enabled = faltamMoradores.isNotEmpty()
                         ) {
-                            Text("Todos")
+                            Text("Moradores")
                         }
                     }
 
@@ -206,6 +247,20 @@ fun LancamentoDialog(
                             onRemover = { pesos.remove(name) }
                         )
                     }
+                }
+
+                // Morador de hoje que o "Coletivo" não alcança — ou a planilha ainda
+                // não tem coluna dele, ou o Forms não tem campo. Sem dizer, o rateio
+                // sairia sem ele e ninguém perceberia até fechar o mês.
+                val foraDoColetivo = activeMemberNames.filterNot { it in doColetivo }
+                if (type == MovementType.COLETIVO && foraDoColetivo.isNotEmpty()) {
+                    Text(
+                        text = "Fora do rateio automático: ${foraDoColetivo.joinToString(", ")}. " +
+                            "Se for para entrar, adicione à mão.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
                 }
 
                 // Nome que a planilha tem e o Forms não: quem não aparece na lista acima
@@ -351,4 +406,19 @@ private fun rotulo(type: MovementType): String = when (type) {
     MovementType.COLETIVO -> "Coletivo"
     MovementType.SAIDA -> "Saída"
     MovementType.ENTRADA -> "Entrada"
+}
+
+/**
+ * Quem entra sozinho quando o lançamento é coletivo.
+ *
+ * Coletivo é despesa da rep inteira, então o rateio é quem mora aqui hoje — e disso quem
+ * sabe é o cadastro do app, não a planilha. Ela mantém na primeira tabela quem já saiu
+ * mas ainda tem saldo a acertar, e agregado que nunca morou aqui; usar as colunas dela
+ * colocaria essa gente para dividir a compra do mercado.
+ *
+ * A ordem é a de [elegiveis] para as linhas saírem alfabéticas como o resto do rateio.
+ */
+internal fun nomesDoColetivo(elegiveis: List<String>, ativos: List<String>): List<String> {
+    val moradores = ativos.toSet()
+    return elegiveis.filter { it in moradores }
 }
