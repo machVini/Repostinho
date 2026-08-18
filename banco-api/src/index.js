@@ -545,7 +545,7 @@ function eventosResponse(events) {
  * resto. Foto de gente numa URL pública e adivinhável (`.../vk.jpg`) seria a única coisa
  * do app aberta para quem passasse por ali.
  */
-async function handleFoto(request, env, id) {
+async function handleFoto(request, env, id, admin) {
   if (!env.TAREFAS) {
     return json({ error: "KV TAREFAS não configurado" }, 500);
   }
@@ -574,6 +574,12 @@ async function handleFoto(request, env, id) {
     return json({ error: "method not allowed" }, 405);
   }
 
+  // Mesma divisão da lista de moradores: o app só lê fotos, quem manda é o cadastro por
+  // linha de comando. Sem isto, um morador logado troca a foto de qualquer outro.
+  if (!admin) {
+    return json({ error: "forbidden" }, 403);
+  }
+
   const contentType = (request.headers.get("content-type") ?? "").split(";")[0].trim();
   if (!FOTO_TIPOS.includes(contentType)) {
     return json({ error: `content-type deve ser um de ${FOTO_TIPOS.join(", ")}` }, 415);
@@ -598,8 +604,13 @@ async function handleFoto(request, env, id) {
  * O app traz uma lista embutida para a primeira abertura sem rede; esta é a que manda
  * quando existe. `POST` grava a lista inteira de uma vez — são 15 pessoas que mudam
  * duas vezes por ano, e mandar tudo evita a pergunta de o que fazer com quem sumiu.
+ *
+ * Ler é coisa de morador; escrever é coisa de administrador. A lista é o que decide
+ * quem entra no app — quem puder gravá-la se cadastra, reativa quem saiu ou troca o
+ * email de outro por um seu. Um morador logado tem token válido, então sem esta
+ * separação o `POST` ficaria aberto para os quinze.
  */
-async function handleMoradores(request, env) {
+async function handleMoradores(request, env, admin) {
   if (!env.TAREFAS) {
     return json({ error: "KV TAREFAS não configurado" }, 500);
   }
@@ -610,6 +621,10 @@ async function handleMoradores(request, env) {
 
   if (request.method !== "POST") {
     return json({ error: "method not allowed" }, 405);
+  }
+
+  if (!admin) {
+    return json({ error: "forbidden" }, 403);
   }
 
   let body;
@@ -811,9 +826,9 @@ export default {
     if (url.pathname === "/atas") return handleAtas(request, env, ctx);
     if (url.pathname === "/tarefas") return handleTarefas(request, env);
     if (url.pathname === "/eventos") return handleEventos(request, env);
-    if (url.pathname === "/moradores") return handleMoradores(request, env);
+    if (url.pathname === "/moradores") return handleMoradores(request, env, admin);
     if (url.pathname.startsWith("/foto/")) {
-      return handleFoto(request, env, decodeURIComponent(url.pathname.slice("/foto/".length)));
+      return handleFoto(request, env, decodeURIComponent(url.pathname.slice("/foto/".length)), admin);
     }
     if (url.pathname !== "/banco") {
       return json({ error: "not found" }, 404);
