@@ -103,8 +103,8 @@ fun TarefasScreen(
 
         item {
             Text(
-                text = "A escala vira sozinha toda quarta-feira. Quem está em cada dupla " +
-                    "ainda é fixo no app.",
+                text = "A escala vira sozinha toda quarta-feira às 14h30. Quem está em " +
+                    "cada dupla ainda é fixo no app.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 16.dp)

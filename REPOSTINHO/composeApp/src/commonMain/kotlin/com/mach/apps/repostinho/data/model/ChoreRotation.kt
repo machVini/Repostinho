@@ -2,6 +2,8 @@ package com.mach.apps.repostinho.data.model
 
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import kotlinx.serialization.Serializable
 
 /**
@@ -34,7 +36,7 @@ data class RotationState(
  * rodando duas vezes, ou rodando só num aparelho. Calculando, uma quarta-feira que passou
  * com o app fechado não tem consequência nenhuma: basta abrir depois.
  *
- * A virada é na quarta porque é o dia em que a rep troca a escala.
+ * A virada é na quarta à tarde porque é quando a rep troca a escala.
  */
 object ChoreRotation {
 
@@ -42,11 +44,33 @@ object ChoreRotation {
     val TURN_DAY = DayOfWeek.WEDNESDAY
 
     /**
+     * A hora da virada, no fuso da rep.
+     *
+     * A escala trocava à meia-noite, mas a rep troca no meio da quarta à tarde. Meia-noite
+     * tirava a tarefa de quem ainda ia fazê-la de manhã e entregava a nova para quem
+     * pegava a casa antes de ela ter sido passada a limpo — as duas pontas erradas ao
+     * mesmo tempo.
+     */
+    val TURN_TIME = LocalTime(14, 30)
+
+    /**
      * A quarta em que a escala do código começou a valer.
      *
      * Mudar esta data reembaralha quem faz o quê, então ela é histórica: fica como está.
      */
     val DEFAULT_ANCHOR = LocalDate(2026, 8, 12)
+
+    /**
+     * A data que manda no rodízio no instante [now].
+     *
+     * Quarta antes das 14h30 ainda é a semana que está acabando; das 14h30 em diante, a
+     * que começa. Nos outros dias é o próprio dia, e por isso o resto do cálculo continua
+     * em [LocalDate]: é uma data por semana, e levar a hora para dentro de [weekIndex]
+     * obrigaria toda chamada a carregar um relógio.
+     */
+    fun rotationDate(now: LocalDateTime): LocalDate =
+        if (now.dayOfWeek == TURN_DAY && now.time < TURN_TIME) now.date.minusDays(1)
+        else now.date
 
     /**
      * Qual semana do rodízio [today] cai, contando de [state].

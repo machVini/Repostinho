@@ -11,8 +11,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.todayIn
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -58,7 +59,7 @@ class RotatingChoreRepository(
     private val preferences: RotationPreferenceStore,
     private val api: BankApi,
     /** Injetável para o teste não depender do relógio da máquina. */
-    private val today: () -> LocalDate = { Clock.System.todayIn(CAMPINAS) }
+    private val now: () -> LocalDateTime = { Clock.System.now().toLocalDateTime(CAMPINAS) }
 ) : ChoreRepository {
 
     private val tasks = MutableStateFlow<List<ChoreTask>>(emptyList())
@@ -75,6 +76,14 @@ class RotatingChoreRepository(
     private var doneWeek: Int? = null
     private var doneIds = emptySet<String>()
     private var shared = false
+
+    /**
+     * A data do rodízio agora — que na quarta de manhã ainda é a de terça.
+     *
+     * Sempre no fuso da rep, e não no do aparelho: a virada é um combinado da casa, e um
+     * morador viajando veria a escala trocar em outro momento que os outros.
+     */
+    private fun today(): LocalDate = ChoreRotation.rotationDate(now())
 
     init {
         // A escala não depende de rede: ela aparece inteira antes de qualquer chamada.
@@ -106,12 +115,12 @@ class RotatingChoreRepository(
     }
 
     override suspend fun setPaused(paused: Boolean) {
-        val now = today()
+        val hoje = today()
         val current = preferences.read()
         val updated = if (paused) {
-            ChoreRotation.pause(current, now)
+            ChoreRotation.pause(current, hoje)
         } else {
-            ChoreRotation.resume(current, now)
+            ChoreRotation.resume(current, hoje)
         }
         preferences.write(updated)
         refresh()
@@ -149,7 +158,7 @@ class RotatingChoreRepository(
     private fun recompute() {
         val week = currentWeek()
 
-        // Virou a quarta: o que estava marcado era da escala anterior.
+        // Passou das 14h30 da quarta: o que estava marcado era da escala anterior.
         if (doneWeek != week) {
             doneWeek = week
             doneIds = emptySet()
@@ -158,11 +167,10 @@ class RotatingChoreRepository(
     }
 
     private fun publish(week: Int) {
-        val now = today()
         tasks.value = ChoreRotation.assign(CHORES, GROUPS, week, doneIds)
         status.value = RotationStatus(
             week = week,
-            rangeLabel = ChoreRotation.weekRangeLabel(now),
+            rangeLabel = ChoreRotation.weekRangeLabel(today()),
             isPaused = preferences.read().isPaused,
             isShared = shared
         )

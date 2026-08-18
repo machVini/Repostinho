@@ -5,6 +5,7 @@ import com.mach.apps.repostinho.data.model.ChoreGroup
 import com.mach.apps.repostinho.data.model.ChoreRotation
 import com.mach.apps.repostinho.data.model.RotationState
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -148,5 +149,73 @@ class ChoreRotationTest {
 
         assertEquals(CHORES.size, tasks.size)
         assertTrue(tasks.all { it.assigneeIds.isEmpty() })
+    }
+}
+
+/**
+ * A virada da quarta às 14h30.
+ *
+ * O dia inteiro de quarta é o caso interessante: de manhã ele ainda pertence à semana que
+ * está acabando, e a partir das 14h30 à que começa. Errar isso troca a escala na frente de
+ * quem ainda ia fazer a tarefa.
+ */
+class TurnTimeTest {
+
+    /** 19/08/2026, a quarta seguinte à âncora. */
+    private fun quarta(hour: Int, minute: Int) =
+        LocalDateTime(2026, 8, 19, hour, minute)
+
+    @Test
+    fun quartaDeManhaAindaEAsemanaAnterior() {
+        assertEquals(LocalDate(2026, 8, 18), ChoreRotation.rotationDate(quarta(9, 0)))
+        assertEquals(0, ChoreRotation.weekIndex(RUNNING, ChoreRotation.rotationDate(quarta(9, 0))))
+    }
+
+    @Test
+    fun umMinutoAntesDaViradaNaoVira() {
+        // O caso que a escala antiga tinha de graça e esta precisa acertar na mão.
+        assertEquals(LocalDate(2026, 8, 18), ChoreRotation.rotationDate(quarta(14, 29)))
+        assertEquals(0, ChoreRotation.weekIndex(RUNNING, ChoreRotation.rotationDate(quarta(14, 29))))
+    }
+
+    @Test
+    fun naHoraCravadaJaEAsemanaNova() {
+        // 14h30 pertence à semana que começa: o intervalo é fechado no início.
+        assertEquals(LocalDate(2026, 8, 19), ChoreRotation.rotationDate(quarta(14, 30)))
+        assertEquals(1, ChoreRotation.weekIndex(RUNNING, ChoreRotation.rotationDate(quarta(14, 30))))
+    }
+
+    @Test
+    fun aMeiaNoiteDaQuartaNaoViraMais() {
+        // Era aqui que a escala trocava antes.
+        assertEquals(LocalDate(2026, 8, 18), ChoreRotation.rotationDate(quarta(0, 0)))
+        assertEquals(0, ChoreRotation.weekIndex(RUNNING, ChoreRotation.rotationDate(quarta(0, 0))))
+    }
+
+    @Test
+    fun osOutrosDiasNaoTemHora() {
+        // Só a quarta olha o relógio; nos demais a data é o próprio dia, de madrugada a
+        // madrugada.
+        val quinta = LocalDateTime(2026, 8, 20, 0, 1)
+        val terca = LocalDateTime(2026, 8, 25, 23, 59)
+
+        assertEquals(LocalDate(2026, 8, 20), ChoreRotation.rotationDate(quinta))
+        assertEquals(LocalDate(2026, 8, 25), ChoreRotation.rotationDate(terca))
+        assertEquals(1, ChoreRotation.weekIndex(RUNNING, ChoreRotation.rotationDate(quinta)))
+        assertEquals(1, ChoreRotation.weekIndex(RUNNING, ChoreRotation.rotationDate(terca)))
+    }
+
+    @Test
+    fun oRotuloAcompanhaAvirada() {
+        // O intervalo na tela é o mesmo da escala: quarta de manhã ainda mostra a semana
+        // que está acabando.
+        assertEquals(
+            "12 a 18 de agosto",
+            ChoreRotation.weekRangeLabel(ChoreRotation.rotationDate(quarta(10, 0)))
+        )
+        assertEquals(
+            "19 a 25 de agosto",
+            ChoreRotation.weekRangeLabel(ChoreRotation.rotationDate(quarta(15, 0)))
+        )
     }
 }
