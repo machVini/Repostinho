@@ -96,6 +96,14 @@ composeApp/src/
 └── wasmJsMain/    Ktor JS engine, localStorage, Firebase JS SDK bridge, PWA entry point
 ```
 
+**The web config lives outside the repo but has to ship inside the bundle.** The PWA
+reads its Firebase keys from `firebase-config.js` in `wasmJsMain/resources/`, gitignored
+alongside `google-services.json` — only `firebase-config.example.js` is versioned. Since
+`firebase deploy --only hosting` replaces the entire site, a bundle built without that
+file publishes a site without it, and web login breaks for everyone. A fresh clone has to
+restore it before the first deploy; the copy in service is readable at
+`/firebase-config.js` on the live site.
+
 **Stale-then-fresh loading, not spinner-then-content.** `RemoteBankSheetRepository`
 publishes the last known-good response from disk immediately on `init`, tagged
 `SyncState.Cached`, then fires a network request that replaces it with
