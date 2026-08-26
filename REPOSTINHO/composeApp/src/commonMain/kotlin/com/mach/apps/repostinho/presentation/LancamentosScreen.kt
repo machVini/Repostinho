@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -23,7 +24,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,13 +34,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mach.apps.repostinho.data.model.Movement
 import com.mach.apps.repostinho.data.model.MovementType
+import com.mach.apps.repostinho.data.remote.RepConfig
+import kotlinx.coroutines.delay
 import com.mach.apps.repostinho.ui.MenuMaxHeight
 import com.mach.apps.repostinho.ui.RepIcons
 import com.mach.apps.repostinho.ui.accentColor
@@ -61,6 +68,24 @@ fun LancamentosScreen(
 
     // O lançamento sai daqui para o Forms, que é quem de fato escreve na planilha.
     val uriHandler = LocalUriHandler.current
+    /*
+     * `LocalClipboardManager` está deprecado em favor do `LocalClipboard` suspenso, mas a
+     * migração espera: montar um `ClipEntry` de texto simples só existe no Android nesta
+     * versão (`ClipboardExtensions.android.kt`), e o app precisa copiar no iOS e no
+     * navegador também. Trocar agora custaria um expect/actual por plataforma para um
+     * botão de copiar.
+     */
+    val clipboard = LocalClipboardManager.current
+
+    // Copiar não muda nada na tela, e sem resposta ninguém sabe se o toque pegou — o
+    // reflexo é tocar de novo. O botão vira "Copiada!" e volta sozinho.
+    var pixCopiada by remember { mutableStateOf(false) }
+    LaunchedEffect(pixCopiada) {
+        if (pixCopiada) {
+            delay(2000)
+            pixCopiada = false
+        }
+    }
 
     val filtered = remember(movements, filterName) {
         filterName?.let { name -> movements.filter { it.involves(name) } } ?: movements
@@ -146,11 +171,36 @@ fun LancamentosScreen(
         }
 
         item {
-            Button(
-                onClick = { lancando = true },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Novo lançamento")
+                Button(
+                    onClick = { lancando = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Novo lançamento")
+                }
+
+                // Sem chave configurada o botão não existe: um "copiar" que copia string
+                // vazia é pior do que botão nenhum — a pessoa cola o nada no banco.
+                if (RepConfig.hasPixKey) {
+                    OutlinedButton(
+                        onClick = {
+                            clipboard.setText(AnnotatedString(RepConfig.PIX_KEY))
+                            pixCopiada = true
+                        }
+                    ) {
+                        Icon(
+                            imageVector = RepIcons.Copy,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(if (pixCopiada) "Copiada!" else "PIX")
+                    }
+                }
             }
         }
 

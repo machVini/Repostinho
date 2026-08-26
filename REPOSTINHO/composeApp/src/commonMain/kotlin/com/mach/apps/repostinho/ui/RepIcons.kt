@@ -106,6 +106,15 @@ object RepIcons {
         )
     }
 
+    /** Duas folhas sobrepostas: copiar para a área de transferência. */
+    val Copy: ImageVector by lazy {
+        icon(
+            "Copy",
+            "M16,1H4C2.9,1 2,1.9 2,3v14h2V3h12V1zM19,5H8C6.9,5 6,5.9 6,7v14c0,1.1 0.9,2 2,2" +
+                "h11c1.1,0 2,-0.9 2,-2V7C21,5.9 20.1,5 19,5zM19,21H8V7h11V21z"
+        )
+    }
+
     /** Seta saindo da caixa: indica que o toque leva para fora do app. */
     val OpenExternal: ImageVector by lazy {
         icon(

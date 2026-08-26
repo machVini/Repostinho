@@ -25,8 +25,17 @@ val bankApiProperties = Properties().apply {
 val generateBankApiConfig by tasks.registering {
     val outputDir = layout.buildDirectory.dir("generated/bankApi")
     val baseUrl = bankApiProperties.getProperty("bancoApi.baseUrl").orEmpty()
+    /*
+     * A chave PIX da rep também vem do `local.properties`.
+     *
+     * Pelo mesmo motivo da URL: o repositório é público, e uma chave PIX costuma ser o
+     * CPF, o telefone ou o email de alguém — dado de uma pessoa de verdade, que não tem
+     * por que ficar num repositório aberto só para virar um botão de copiar.
+     */
+    val pixKey = bankApiProperties.getProperty("repostinho.pixKey").orEmpty()
 
     inputs.property("baseUrl", baseUrl)
+    inputs.property("pixKey", pixKey)
     outputs.dir(outputDir)
 
     doLast {
@@ -41,6 +50,12 @@ val generateBankApiConfig by tasks.registering {
             internal object BankApiConfig {
                 const val BASE_URL = "$baseUrl"
                 val isConfigured: Boolean get() = BASE_URL.isNotBlank()
+            }
+
+            // Gerado pelo Gradle a partir do local.properties. Não edite à mão.
+            internal object RepConfig {
+                const val PIX_KEY = "$pixKey"
+                val hasPixKey: Boolean get() = PIX_KEY.isNotBlank()
             }
 
             """.trimIndent()
