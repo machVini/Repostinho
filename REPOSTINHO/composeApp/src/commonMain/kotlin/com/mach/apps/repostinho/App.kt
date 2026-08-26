@@ -33,6 +33,7 @@ import com.mach.apps.repostinho.data.local.ThemePreferenceStore
 import com.mach.apps.repostinho.presentation.BancoScreen
 import com.mach.apps.repostinho.presentation.CalendarioScreen
 import com.mach.apps.repostinho.presentation.DashboardViewModel
+import com.mach.apps.repostinho.presentation.FichaMedicaScreen
 import com.mach.apps.repostinho.presentation.HomeScreen
 import com.mach.apps.repostinho.presentation.LoginScreen
 import com.mach.apps.repostinho.presentation.LoginViewModel
@@ -126,13 +127,25 @@ fun App() {
             // voltar ter o que desfazer, as trocas de aba ficam registradas aqui.
             val backStack = remember { mutableStateListOf<AppTab>() }
 
+            // A única tela que não é aba: as fichas dos moradores, abertas de dentro do
+            // Perfil. Um booleano em vez de entrada na `AppTab` porque ela não pode
+            // aparecer na barra de baixo — chega-se nela por um caminho só.
+            var fichasAbertas by remember { mutableStateOf(false) }
+
             fun navigateTo(tab: AppTab) {
+                // Tocar numa aba sai das fichas: elas são um desvio do Perfil, não um
+                // lugar onde se fica.
+                fichasAbertas = false
                 if (tab == selectedTab) return
                 backStack.add(selectedTab)
                 selectedTab = tab
             }
 
             fun navigateBack() {
+                if (fichasAbertas) {
+                    fichasAbertas = false
+                    return
+                }
                 if (backStack.isEmpty()) return
                 selectedTab = backStack.removeAt(backStack.lastIndex)
             }
@@ -142,14 +155,15 @@ fun App() {
                     CenterAlignedTopAppBar(
                         title = {
                             Text(
-                                text = selectedTab.title,
+                                text = if (fichasAbertas) "Fichas médicas"
+                                else selectedTab.title,
                                 style = MaterialTheme.typography.titleMedium
                             )
                         },
                         navigationIcon = {
                             // Só aparece quando existe aba anterior — um botão de voltar
                             // que não volta para lugar nenhum só confunde.
-                            if (backStack.isNotEmpty()) {
+                            if (backStack.isNotEmpty() || fichasAbertas) {
                                 IconButton(onClick = { navigateBack() }) {
                                     Icon(RepIcons.Back, contentDescription = "Voltar")
                                 }
@@ -223,6 +237,15 @@ fun App() {
                     val full = Modifier.fillMaxSize()
                     val inset = Modifier.fillMaxSize().padding(horizontal = 16.dp)
 
+                    if (fichasAbertas) {
+                        FichaMedicaScreen(
+                            residents = state.residents,
+                            currentResidentId = state.currentResidentId,
+                            modifier = inset
+                        )
+                        return@Column
+                    }
+
                     when (selectedTab) {
                         AppTab.HOME -> HomeScreen(
                             state = state,
@@ -277,6 +300,7 @@ fun App() {
                             myBalanceCents = sheet.myBalanceCents,
                             tasks = tasks,
                             onSignOut = loginViewModel::signOut,
+                            onOpenFichas = { fichasAbertas = true },
                             modifier = inset
                         )
                     }

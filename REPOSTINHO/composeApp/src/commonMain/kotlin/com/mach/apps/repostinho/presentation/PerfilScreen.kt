@@ -45,6 +45,7 @@ fun PerfilScreen(
     myBalanceCents: Long?,
     tasks: List<ChoreTask>,
     onSignOut: () -> Unit,
+    onOpenFichas: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var saindo by remember { mutableStateOf(false) }
@@ -115,6 +116,25 @@ fun PerfilScreen(
         }
 
         item {
+            Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text("Ficha médica", fontWeight = FontWeight.Bold)
+                    FichaMedicaLines(resident?.medical)
+
+                    // A ficha dos outros mora atrás de um toque, e não desta tela: aqui o
+                    // morador veio ver a própria. Mas o caminho precisa existir daqui,
+                    // porque é onde alguém pensa em ficha médica.
+                    TextButton(
+                        onClick = onOpenFichas,
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        Text("Ver ficha dos moradores")
+                    }
+                }
+            }
+        }
+
+        item {
             Text(
                 text = resident?.email ?: "Sem email cadastrado.",
                 style = MaterialTheme.typography.bodySmall,
@@ -177,7 +197,7 @@ private fun formatBirthday(resident: Resident?): String? {
  * buraco no topo do perfil parece tela quebrada.
  */
 @Composable
-private fun ResidentPhoto(photoUrl: String?, name: String, size: Dp) {
+fun ResidentPhoto(photoUrl: String?, name: String, size: Dp) {
     val initial = name.trim().firstOrNull()?.uppercase() ?: "?"
 
     Box(
@@ -207,7 +227,7 @@ private fun ResidentPhoto(photoUrl: String?, name: String, size: Dp) {
 }
 
 @Composable
-private fun InfoLine(label: String, value: String) {
+fun InfoLine(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween

@@ -187,3 +187,72 @@ test("administrador troca a foto", async () => {
   assert.equal(res.status, 200);
   assert.equal(TAREFAS.escritas, 1);
 });
+
+/*
+ * A ficha médica na volta do KV.
+ *
+ * O `validResident` descarta campo que ele não conhece — foi assim que a ficha ficou de
+ * fora até existir este código. O teste existe para que ela não volte a sumir em silêncio
+ * numa mudança futura: uma ficha perdida só é notada na emergência.
+ */
+const COM_FICHA = [
+  {
+    id: "peter",
+    name: "Peter",
+    isActive: true,
+    medical: {
+      bloodType: "  O+ ",
+      allergies: ["dipirona", "   ", "poeira"],
+      medications: [],
+      conditions: ["asma"],
+      healthPlan: "Unimed 1234",
+      emergencyContactName: "Mãe",
+      emergencyContactPhone: "(19) 99999-0000",
+      notes: "  ",
+      inventado: "some daqui",
+    },
+  },
+];
+
+test("a ficha médica sobrevive à gravação, limpa", async () => {
+  const TAREFAS = kvFalso(LISTA);
+  const env = { TAREFAS, API_TOKEN, FIREBASE_PROJECT_ID: PROJECT_ID };
+
+  const res = await worker.fetch(requisicao({ "x-rep-token": API_TOKEN }, COM_FICHA), env, {});
+  assert.equal(res.status, 200);
+
+  const { residents } = await res.json();
+  const ficha = residents[0].medical;
+
+  assert.equal(ficha.bloodType, "O+");
+  // O item em branco sai da lista: ele viraria uma vírgula solta na tela.
+  assert.deepEqual(ficha.allergies, ["dipirona", "poeira"]);
+  assert.deepEqual(ficha.medications, []);
+  assert.equal(ficha.notes, null);
+  assert.equal(ficha.emergencyContactPhone, "(19) 99999-0000");
+  assert.equal(ficha.inventado, undefined);
+});
+
+test("ficha vazia vira nenhuma ficha", async () => {
+  // "Preencheu tudo em branco" e "não preencheu" precisam chegar iguais na tela.
+  const vazia = [{ id: "du", name: "Du", isActive: true, medical: { bloodType: "   ", allergies: [] } }];
+  const TAREFAS = kvFalso(LISTA);
+  const env = { TAREFAS, API_TOKEN, FIREBASE_PROJECT_ID: PROJECT_ID };
+
+  const res = await worker.fetch(requisicao({ "x-rep-token": API_TOKEN }, vazia), env, {});
+  const { residents } = await res.json();
+
+  assert.equal(residents[0].medical, null);
+});
+
+test("morador sem ficha continua válido", async () => {
+  // Ninguém é obrigado a preencher, e a ausência não pode invalidar o cadastro inteiro.
+  const TAREFAS = kvFalso(LISTA);
+  const env = { TAREFAS, API_TOKEN, FIREBASE_PROJECT_ID: PROJECT_ID };
+
+  const res = await worker.fetch(requisicao({ "x-rep-token": API_TOKEN }, LISTA), env, {});
+  const { residents } = await res.json();
+
+  assert.equal(res.status, 200);
+  assert.equal(residents[0].medical, null);
+});

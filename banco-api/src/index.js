@@ -695,7 +695,48 @@ function validResident(raw) {
     // O nome dele na planilha, quando diferente. Sem isso o app procura a coluna pelo
     // nome que exibe, não acha, e a pessoa vê saldo vazio como se não devesse nada.
     sheetName: typeof raw.sheetName === "string" ? raw.sheetName.trim() || null : null,
+    medical: validMedical(raw.medical),
   };
+}
+
+/**
+ * A ficha médica, limpa.
+ *
+ * Ficha é lida em emergência, então o formato tem de ser previsível: campo em branco vira
+ * `null` e lista com lixo dentro vira lista sem o lixo, para a tela nunca ter de decidir
+ * o que fazer com `"  "` no lugar de uma alergia.
+ *
+ * Ficha inteiramente vazia vira `null` — é assim que o app distingue "não preencheu" de
+ * "preencheu e não tem nada a declarar".
+ */
+function validMedical(raw) {
+  if (!raw || typeof raw !== "object") return null;
+
+  const texto = (value) =>
+    typeof value === "string" ? value.trim() || null : null;
+  const lista = (value) =>
+    Array.isArray(value)
+      ? value
+          .filter((item) => typeof item === "string")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : [];
+
+  const ficha = {
+    bloodType: texto(raw.bloodType),
+    allergies: lista(raw.allergies),
+    medications: lista(raw.medications),
+    conditions: lista(raw.conditions),
+    healthPlan: texto(raw.healthPlan),
+    emergencyContactName: texto(raw.emergencyContactName),
+    emergencyContactPhone: texto(raw.emergencyContactPhone),
+    notes: texto(raw.notes),
+  };
+
+  const vazia = Object.values(ficha).every(
+    (valor) => valor === null || (Array.isArray(valor) && valor.length === 0)
+  );
+  return vazia ? null : ficha;
 }
 
 function intInRange(value, min, max) {

@@ -50,7 +50,15 @@ data class Resident(
      * URL, e não imagem embutida: foto no binário obriga a publicar versão nova do app
      * toda vez que alguém troca a sua.
      */
-    val photoUrl: String? = null
+    val photoUrl: String? = null,
+    /**
+     * A ficha médica, quando existe.
+     *
+     * Vem junto do morador, e não de uma rota própria, porque é sempre lida com ele do
+     * lado: a tela mostra foto, nome e ficha na mesma linha, e uma segunda chamada só
+     * abriria a chance de a lista chegar sem as fichas — ou o contrário.
+     */
+    val medical: MedicalRecord? = null
 ) {
     /** Como procurá-lo nas colunas da planilha. */
     val bankName: String get() = sheetName?.takeIf { it.isNotBlank() } ?: name
