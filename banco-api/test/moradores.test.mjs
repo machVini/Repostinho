@@ -202,13 +202,17 @@ const COM_FICHA = [
     isActive: true,
     medical: {
       bloodType: "  O+ ",
-      allergies: ["dipirona", "   ", "poeira"],
-      medications: [],
-      conditions: ["asma"],
-      healthPlan: "Unimed 1234",
-      emergencyContactName: "Mãe",
-      emergencyContactPhone: "(19) 99999-0000",
-      notes: "  ",
+      drugAllergies: "Nenhuma conhecida",
+      otherAllergies: "  ",
+      conditions: "Rinite alérgica",
+      medications: "Levotiroxina 112mcg",
+      medicationLocation: "Caixa azul na pia do banheiro",
+      contacts: [
+        { name: " Luciana ", relationship: "Mãe", phone: "(19) 99226-2146" },
+        { name: "   ", relationship: "Amiga", phone: "(11) 96192-7998" },
+        { name: "Adara", relationship: null, phone: null },
+      ],
+      notes: "Toma o remédio todo dia",
       inventado: "some daqui",
     },
   },
@@ -225,17 +229,32 @@ test("a ficha médica sobrevive à gravação, limpa", async () => {
   const ficha = residents[0].medical;
 
   assert.equal(ficha.bloodType, "O+");
-  // O item em branco sai da lista: ele viraria uma vírgula solta na tela.
-  assert.deepEqual(ficha.allergies, ["dipirona", "poeira"]);
-  assert.deepEqual(ficha.medications, []);
-  assert.equal(ficha.notes, null);
-  assert.equal(ficha.emergencyContactPhone, "(19) 99999-0000");
+  assert.equal(ficha.otherAllergies, null);
+  assert.equal(ficha.medicationLocation, "Caixa azul na pia do banheiro");
   assert.equal(ficha.inventado, undefined);
+});
+
+test("contato sem nome não entra", async () => {
+  // Telefone sem dono não diz para quem se está ligando, e numa emergência isso é pior
+  // do que um contato a menos.
+  const TAREFAS = kvFalso(LISTA);
+  const env = { TAREFAS, API_TOKEN, FIREBASE_PROJECT_ID: PROJECT_ID };
+
+  const res = await worker.fetch(requisicao({ "x-rep-token": API_TOKEN }, COM_FICHA), env, {});
+  const { residents } = await res.json();
+  const contacts = residents[0].medical.contacts;
+
+  assert.equal(contacts.length, 2);
+  assert.deepEqual(contacts.map((c) => c.name), ["Luciana", "Adara"]);
+  // Contato só com nome continua valendo: alguém para procurar já é alguma coisa.
+  assert.equal(contacts[1].phone, null);
 });
 
 test("ficha vazia vira nenhuma ficha", async () => {
   // "Preencheu tudo em branco" e "não preencheu" precisam chegar iguais na tela.
-  const vazia = [{ id: "du", name: "Du", isActive: true, medical: { bloodType: "   ", allergies: [] } }];
+  const vazia = [
+    { id: "du", name: "Du", isActive: true, medical: { bloodType: "   ", contacts: [] } },
+  ];
   const TAREFAS = kvFalso(LISTA);
   const env = { TAREFAS, API_TOKEN, FIREBASE_PROJECT_ID: PROJECT_ID };
 

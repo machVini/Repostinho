@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mach.apps.repostinho.data.model.EmergencyContact
 import com.mach.apps.repostinho.data.model.MedicalRecord
 import com.mach.apps.repostinho.data.model.Resident
 
@@ -98,14 +99,37 @@ fun FichaMedicaLines(record: MedicalRecord?) {
     }
 
     InfoLine("Tipo sanguíneo", record.bloodType.orDash())
-    InfoLine("Alergias", record.allergies.orDash())
-    InfoLine("Medicamentos", record.medications.orDash())
+    InfoLine("Alergia a remédios", record.drugAllergies.orDash())
+    InfoLine("Outras alergias", record.otherAllergies.orDash())
     InfoLine("Condições", record.conditions.orDash())
-    InfoLine("Convênio", record.healthPlan.orDash())
-    InfoLine("Emergência", emergencyLabel(record))
+    InfoLine("Medicamentos", record.medications.orDash())
 
-    // Fora das linhas rótulo-valor: observação é frase, e espremida numa coluna estreita
-    // ela apareceria cortada com reticências justamente onde está o detalhe que importa.
+    // Só quem toma algo tem onde guardar: a linha em branco atrapalharia a leitura de
+    // quem está com pressa.
+    record.medicationLocation?.takeIf { it.isNotBlank() }?.let {
+        InfoLine("Onde guarda", it)
+    }
+
+    // Fora do rótulo-valor: contato é nome e telefone, e o telefone é o que a pessoa vai
+    // ler em voz alta enquanto disca. Espremido numa coluna estreita, sairia cortado.
+    if (record.contacts.isNotEmpty()) {
+        Text(
+            text = "Emergência",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 12.dp)
+        )
+        record.contacts.forEach { contact ->
+            Text(
+                text = contactLabel(contact),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+    }
+
+    // Observação é frase, e é onde está o detalhe que os campos não pegam — "se eu
+    // desmaiar, me deixa deitada" não cabe em nenhuma outra linha.
     record.notes?.takeIf { it.isNotBlank() }?.let { notes ->
         Text(
             text = notes,
@@ -116,17 +140,13 @@ fun FichaMedicaLines(record: MedicalRecord?) {
     }
 }
 
-/** "Mãe — (19) 99999-0000", ou só o que existir. */
-private fun emergencyLabel(record: MedicalRecord): String {
-    val name = record.emergencyContactName?.takeIf { it.isNotBlank() }
-    val phone = record.emergencyContactPhone?.takeIf { it.isNotBlank() }
-    return when {
-        name != null && phone != null -> "$name — $phone"
-        else -> name ?: phone ?: "—"
-    }
+/** "Wilma (Mãe) — (11) 96527-4391", ou só o que existir. */
+private fun contactLabel(contact: EmergencyContact): String {
+    val quem = contact.relationship?.takeIf { it.isNotBlank() }
+        ?.let { "${contact.name} ($it)" }
+        ?: contact.name
+    val phone = contact.phone?.takeIf { it.isNotBlank() } ?: return quem
+    return "$quem — $phone"
 }
 
 private fun String?.orDash(): String = this?.takeIf { it.isNotBlank() } ?: "—"
-
-private fun List<String>.orDash(): String =
-    filter { it.isNotBlank() }.joinToString(", ").ifBlank { "—" }

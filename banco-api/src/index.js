@@ -703,33 +703,40 @@ function validResident(raw) {
  * A ficha médica, limpa.
  *
  * Ficha é lida em emergência, então o formato tem de ser previsível: campo em branco vira
- * `null` e lista com lixo dentro vira lista sem o lixo, para a tela nunca ter de decidir
- * o que fazer com `"  "` no lugar de uma alergia.
+ * `null`, para a tela nunca ter de decidir o que fazer com `"  "` no lugar de uma alergia.
  *
  * Ficha inteiramente vazia vira `null` — é assim que o app distingue "não preencheu" de
- * "preencheu e não tem nada a declarar".
+ * "preencheu dizendo que não tem nada". Quem respondeu "nenhuma" respondeu, e isso
+ * aparece.
+ *
+ * Contato sem nome cai fora: um telefone sem dono não diz para quem se está ligando.
  */
 function validMedical(raw) {
   if (!raw || typeof raw !== "object") return null;
 
   const texto = (value) =>
     typeof value === "string" ? value.trim() || null : null;
-  const lista = (value) =>
-    Array.isArray(value)
-      ? value
-          .filter((item) => typeof item === "string")
-          .map((item) => item.trim())
-          .filter(Boolean)
-      : [];
+
+  const contacts = Array.isArray(raw.contacts)
+    ? raw.contacts
+        .map((c) => (c && typeof c === "object" ? c : null))
+        .filter(Boolean)
+        .map((c) => ({
+          name: texto(c.name),
+          relationship: texto(c.relationship),
+          phone: texto(c.phone),
+        }))
+        .filter((c) => c.name)
+    : [];
 
   const ficha = {
     bloodType: texto(raw.bloodType),
-    allergies: lista(raw.allergies),
-    medications: lista(raw.medications),
-    conditions: lista(raw.conditions),
-    healthPlan: texto(raw.healthPlan),
-    emergencyContactName: texto(raw.emergencyContactName),
-    emergencyContactPhone: texto(raw.emergencyContactPhone),
+    drugAllergies: texto(raw.drugAllergies),
+    otherAllergies: texto(raw.otherAllergies),
+    conditions: texto(raw.conditions),
+    medications: texto(raw.medications),
+    medicationLocation: texto(raw.medicationLocation),
+    contacts,
     notes: texto(raw.notes),
   };
 
