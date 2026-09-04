@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mach.apps.repostinho.data.model.EmergencyContact
 import com.mach.apps.repostinho.data.model.MedicalRecord
@@ -168,6 +169,9 @@ private fun FichaLine(label: String, value: String) {
             text = value,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
+            // Alinhada à direita: as respostas ficam encostadas na mesma borda, e o olho
+            // desce a coluna sem procurar onde cada uma começa.
+            textAlign = TextAlign.End,
             modifier = Modifier.weight(0.58f)
         )
     }
