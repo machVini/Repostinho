@@ -98,16 +98,16 @@ fun FichaMedicaLines(record: MedicalRecord?) {
         return
     }
 
-    InfoLine("Tipo sanguíneo", record.bloodType.orDash())
-    InfoLine("Alergia a remédios", record.drugAllergies.orDash())
-    InfoLine("Outras alergias", record.otherAllergies.orDash())
-    InfoLine("Condições", record.conditions.orDash())
-    InfoLine("Medicamentos", record.medications.orDash())
+    FichaLine("Tipo sanguíneo", record.bloodType.orDash())
+    FichaLine("Alergia a remédios", record.drugAllergies.orDash())
+    FichaLine("Outras alergias", record.otherAllergies.orDash())
+    FichaLine("Condições", record.conditions.orDash())
+    FichaLine("Medicamentos", record.medications.orDash())
 
     // Só quem toma algo tem onde guardar: a linha em branco atrapalharia a leitura de
     // quem está com pressa.
     record.medicationLocation?.takeIf { it.isNotBlank() }?.let {
-        InfoLine("Onde guarda", it)
+        FichaLine("Onde guarda", it)
     }
 
     // Fora do rótulo-valor: contato é nome e telefone, e o telefone é o que a pessoa vai
@@ -136,6 +136,39 @@ fun FichaMedicaLines(record: MedicalRecord?) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 12.dp)
+        )
+    }
+}
+
+/**
+ * Rótulo à esquerda, resposta à direita, cada um na sua coluna.
+ *
+ * Não usa o [InfoLine] do perfil porque lá o valor é curto e conhecido — "Individual",
+ * "Março de 2026" — e aqui é texto livre digitado por morador. No `Row`, o filho **sem**
+ * peso é medido primeiro e leva a largura que pedir: "Camarão, gato, cachorro, ácaros e
+ * poeira" tomava a linha inteira e o rótulo sumia embaixo dela.
+ *
+ * Com peso nos dois, cada um fica na sua fatia e a resposta comprida quebra em mais
+ * linhas em vez de invadir a coluna do lado. Sem `maxLines`: cortar a alergia de alguém
+ * com reticências é perder justamente a parte que não cabia.
+ */
+@Composable
+private fun FichaLine(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(0.42f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(0.58f)
         )
     }
 }
