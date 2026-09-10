@@ -4,13 +4,14 @@ import com.mach.apps.repostinho.data.model.Chore
 import com.mach.apps.repostinho.data.model.ChoreGroup
 import com.mach.apps.repostinho.data.model.ChoreRotation
 import com.mach.apps.repostinho.data.model.RotationState
+import com.mach.apps.repostinho.data.repository.RotatingChoreRepository
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** 07/08/2026 é sexta-feira — a âncora do rodízio. */
+/** Uma sexta-feira qualquer, para os testes que só olham distância entre datas. */
 private val ANCHOR = LocalDate(2026, 8, 7)
 private val RUNNING = RotationState(anchor = ANCHOR)
 
@@ -47,26 +48,31 @@ class ChoreRotationTest {
     }
 
     @Test
-    fun aAncoraAntigaDaQuartaContinuaValendoOMesmo() {
-        // Quem já tem o app guardou 12/08 em disco, e essa data continua chegando aqui
-        // depois da troca para sexta. Como a conta passa pela sexta anterior — 07/08 —,
-        // as duas âncoras dão a mesma semana: ninguém troca de tarefa por causa da
-        // mudança de dia, só pela virada passar a acontecer antes.
-        val antiga = RotationState(anchor = LocalDate(2026, 8, 12))
+    fun aFolgaDe10DeSetembroEhDoVkEDoMaisNovo() {
+        // A escala que a rep pediu de volta, presa contra as tarefas e os grupos de
+        // verdade — não contra os fixos deste arquivo. Se alguém mexer na âncora sem
+        // querer, é aqui que aparece.
+        val estado = RotationState(anchor = ChoreRotation.DEFAULT_ANCHOR)
+        val semana = ChoreRotation.weekIndex(estado, LocalDate(2026, 9, 10))
+        val folga = ChoreRotation
+            .assign(RotatingChoreRepository.CHORES, RotatingChoreRepository.GROUPS, semana)
+            .first { it.isRest }
 
-        listOf(
-            LocalDate(2026, 8, 7),
-            LocalDate(2026, 8, 13),
-            LocalDate(2026, 8, 14),
-            LocalDate(2026, 9, 10),
-            LocalDate(2026, 12, 25)
-        ).forEach { dia ->
-            assertEquals(
-                ChoreRotation.weekIndex(RUNNING, dia),
-                ChoreRotation.weekIndex(antiga, dia),
-                "semana diferente em $dia"
-            )
-        }
+        assertEquals(3, semana)
+        assertEquals(listOf("mais-novo", "vk"), folga.assigneeIds)
+    }
+
+    @Test
+    fun aAncoraGuardadaEmDiscoNaoAcompanhaAVolta() {
+        // Quem pausou o rodízio alguma vez tem a âncora antiga no `rodizio.txt`, e o
+        // arquivo ganha do padrão. Nesse aparelho a escala fica uma semana à frente até
+        // o arquivo sumir — apagar o dado do app resolve; pausar e retomar, não, porque
+        // retomar preserva o índice congelado.
+        val guardada = RotationState(anchor = LocalDate(2026, 8, 12))
+        val dia = LocalDate(2026, 9, 10)
+
+        assertEquals(3, ChoreRotation.weekIndex(RotationState(ChoreRotation.DEFAULT_ANCHOR), dia))
+        assertEquals(4, ChoreRotation.weekIndex(guardada, dia))
     }
 
     @Test

@@ -55,13 +55,18 @@ object ChoreRotation {
     /**
      * A sexta em que a escala do código começou a valer.
      *
-     * Era 12/08, uma quarta, enquanto a virada era na quarta. Com a virada na sexta, a
-     * conta passa pela sexta anterior de qualquer jeito — 07/08 —, então trocar o literal
-     * não mexe em quem faz o quê: é a mesma semana, escrita do jeito que a conta lê.
+     * Começou em 12/08, uma quarta, quando a virada era na quarta. Virou 07/08 ao mudar
+     * para sexta — a mesma semana, porque a conta já normalizava a âncora para o dia de
+     * virada anterior.
      *
-     * Fora isso ela é histórica: mudar de semana aqui reembaralharia a escala inteira.
+     * Agora é 14/08, uma semana à frente, e essa mudança **é** de propósito: a rep pediu
+     * a escala de volta para a semana anterior, com o VK e o Mais Novo na folga. Âncora
+     * mais tarde significa índice menor, e índice menor é a escala andando para trás.
+     *
+     * Fora um pedido assim, esta data não se mexe: cada semana daqui desloca todo mundo
+     * uma tarefa na lista.
      */
-    val DEFAULT_ANCHOR = LocalDate(2026, 8, 7)
+    val DEFAULT_ANCHOR = LocalDate(2026, 8, 14)
 
     /**
      * A data que manda no rodízio no instante [now].
