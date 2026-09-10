@@ -16,7 +16,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class RotationState(
     /**
-     * A quarta-feira que conta como semana 0.
+     * A sexta-feira que conta como semana 0.
      *
      * Ela se move quando o rodízio é retomado depois de uma pausa: é assim que as semanas
      * paradas somem da conta em vez de serem puladas de uma vez.
@@ -33,38 +33,41 @@ data class RotationState(
  *
  * A escala não é "rodada" por ninguém: ela é função da data. Um job semanal que
  * reescrevesse as duplas erraria de três jeitos — não rodando (celular desligado),
- * rodando duas vezes, ou rodando só num aparelho. Calculando, uma quarta-feira que passou
+ * rodando duas vezes, ou rodando só num aparelho. Calculando, uma sexta-feira que passou
  * com o app fechado não tem consequência nenhuma: basta abrir depois.
  *
- * A virada é na quarta à tarde porque é quando a rep troca a escala.
+ * A virada é na sexta ao meio-dia porque é quando a rep troca a escala.
  */
 object ChoreRotation {
 
     /** O dia em que a escala vira. */
-    val TURN_DAY = DayOfWeek.WEDNESDAY
+    val TURN_DAY = DayOfWeek.FRIDAY
 
     /**
      * A hora da virada, no fuso da rep.
      *
-     * A escala trocava à meia-noite, mas a rep troca no meio da quarta à tarde. Meia-noite
-     * tirava a tarefa de quem ainda ia fazê-la de manhã e entregava a nova para quem
-     * pegava a casa antes de ela ter sido passada a limpo — as duas pontas erradas ao
-     * mesmo tempo.
+     * Meio-dia, e não meia-noite, pelo mesmo motivo de sempre: à meia-noite a tarefa sai
+     * da tela de quem ainda ia fazê-la de manhã e chega para quem só pega a casa depois
+     * — as duas pontas erradas ao mesmo tempo.
      */
-    val TURN_TIME = LocalTime(14, 30)
+    val TURN_TIME = LocalTime(12, 0)
 
     /**
-     * A quarta em que a escala do código começou a valer.
+     * A sexta em que a escala do código começou a valer.
      *
-     * Mudar esta data reembaralha quem faz o quê, então ela é histórica: fica como está.
+     * Era 12/08, uma quarta, enquanto a virada era na quarta. Com a virada na sexta, a
+     * conta passa pela sexta anterior de qualquer jeito — 07/08 —, então trocar o literal
+     * não mexe em quem faz o quê: é a mesma semana, escrita do jeito que a conta lê.
+     *
+     * Fora isso ela é histórica: mudar de semana aqui reembaralharia a escala inteira.
      */
-    val DEFAULT_ANCHOR = LocalDate(2026, 8, 12)
+    val DEFAULT_ANCHOR = LocalDate(2026, 8, 7)
 
     /**
      * A data que manda no rodízio no instante [now].
      *
-     * Quarta antes das 14h30 ainda é a semana que está acabando; das 14h30 em diante, a
-     * que começa. Nos outros dias é o próprio dia, e por isso o resto do cálculo continua
+     * Sexta antes do meio-dia ainda é a semana que está acabando; do meio-dia em diante,
+     * a que começa. Nos outros dias é o próprio dia, e por isso o resto do cálculo continua
      * em [LocalDate]: é uma data por semana, e levar a hora para dentro de [weekIndex]
      * obrigaria toda chamada a carregar um relógio.
      */
@@ -75,7 +78,7 @@ object ChoreRotation {
     /**
      * Qual semana do rodízio [today] cai, contando de [state].
      *
-     * Pausado, a resposta é sempre a mesma, independentemente de quantas quartas passem.
+     * Pausado, a resposta é sempre a mesma, independentemente de quantas sextas passem.
      */
     fun weekIndex(state: RotationState, today: LocalDate): Int =
         state.pausedAtWeek ?: weeksSinceAnchor(state.anchor, today)
@@ -89,7 +92,7 @@ object ChoreRotation {
      * Volta a andar a partir da escala congelada.
      *
      * A âncora recua tantas semanas quanto o índice congelado, de forma que hoje continue
-     * sendo a mesma escala e a próxima quarta seja a seguinte. Sem isso, retomar depois de
+     * sendo a mesma escala e a próxima sexta seja a seguinte. Sem isso, retomar depois de
      * um mês de férias saltaria quatro semanas de uma vez, e quem estava devendo a louça
      * escaparia dela.
      */
@@ -137,13 +140,13 @@ object ChoreRotation {
     }
 
     /**
-     * O intervalo da semana em que [date] cai: "12 a 18 de agosto".
+     * O intervalo da semana em que [date] cai: "7 a 13 de agosto".
      *
      * Sai da data, e não de um texto fixo, porque um rótulo escrito à mão fica errado na
-     * quarta seguinte — e um rótulo errado é pior do que rótulo nenhum numa escala que
+     * sexta seguinte — e um rótulo errado é pior do que rótulo nenhum numa escala que
      * define quem lava a louça.
      *
-     * O mês só aparece dos dois lados quando a semana vira o mês: "26 de agosto a 1 de
+     * O mês só aparece dos dois lados quando a semana vira o mês: "28 de agosto a 3 de
      * setembro".
      */
     fun weekRangeLabel(date: LocalDate): String {
@@ -164,14 +167,14 @@ object ChoreRotation {
         "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
     )
 
-    /** A quarta-feira de [date], ou a própria data se ela já for quarta. */
+    /** A sexta-feira de [date], ou a própria data se ela já for sexta. */
     fun turnDayOnOrBefore(date: LocalDate): LocalDate {
         val diff = (date.dayOfWeek.ordinal - TURN_DAY.ordinal).mod(7)
         return date.minusDays(diff)
     }
 
     /**
-     * Quantas viradas de quarta-feira separam [anchor] de [today].
+     * Quantas viradas de sexta-feira separam [anchor] de [today].
      *
      * Divisão para baixo, e não truncada: com uma âncora à frente da data — relógio do
      * aparelho atrasado, por exemplo — o truncamento devolveria 0 para qualquer atraso

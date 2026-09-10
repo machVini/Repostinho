@@ -233,7 +233,7 @@ class DashboardViewModel(
         // Foto e aniversário vêm com os moradores, e mudam sem aviso.
         viewModelScope.launch { residentRepository.refresh() }
         // A escala não vem da rede, mas depende da data: sem recalcular aqui, um app
-        // deixado aberto atravessa a quarta-feira mostrando a semana anterior.
+        // deixado aberto atravessa a sexta-feira mostrando a semana anterior.
         viewModelScope.launch { choreRepository.refresh() }
     }
 
@@ -249,7 +249,7 @@ class DashboardViewModel(
     }
 
     /**
-     * Congela ou destrava o rodízio. Pausado, ninguém troca de tarefa na quarta.
+     * Congela ou destrava o rodízio. Pausado, ninguém troca de tarefa na sexta.
      *
      * Sem botão na tela por enquanto: pausar valeria só neste aparelho, e a escala parada
      * num celular enquanto gira nos outros confunde mais do que ajuda. A lógica fica

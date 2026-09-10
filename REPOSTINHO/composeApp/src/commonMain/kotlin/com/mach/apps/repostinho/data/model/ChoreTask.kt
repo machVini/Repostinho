@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
  *
  * Quem faz depende da semana: as tarefas ficam paradas numa ordem e são os grupos que
  * andam por cima delas. Guardar o responsável aqui era o que obrigava a reescrever a
- * escala toda quarta.
+ * escala toda sexta.
  */
 @Serializable
 data class Chore(

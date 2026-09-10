@@ -20,7 +20,7 @@ import kotlin.time.ExperimentalTime
 /** Em que pé está o rodízio, para a tela poder dizer. */
 data class RotationStatus(
     val week: Int,
-    /** "12 a 18 de agosto" — o intervalo desta semana, já pronto para a tela. */
+    /** "7 a 13 de agosto" — o intervalo desta semana, já pronto para a tela. */
     val rangeLabel: String,
     val isPaused: Boolean,
     /**
@@ -78,7 +78,7 @@ class RotatingChoreRepository(
     private var shared = false
 
     /**
-     * A data do rodízio agora — que na quarta de manhã ainda é a de terça.
+     * A data do rodízio agora — que na sexta de manhã ainda é a de quinta.
      *
      * Sempre no fuso da rep, e não no do aparelho: a virada é um combinado da casa, e um
      * morador viajando veria a escala trocar em outro momento que os outros.
@@ -158,7 +158,7 @@ class RotatingChoreRepository(
     private fun recompute() {
         val week = currentWeek()
 
-        // Passou das 14h30 da quarta: o que estava marcado era da escala anterior.
+        // Passou do meio-dia da sexta: o que estava marcado era da escala anterior.
         if (doneWeek != week) {
             doneWeek = week
             doneIds = emptySet()
@@ -191,7 +191,7 @@ class RotatingChoreRepository(
         )
 
         /**
-         * Os grupos na posição da semana da âncora (12/08/2026) — é o que faz a escala
+         * Os grupos na posição da semana da âncora (07/08/2026) — é o que faz a escala
          * combinada na rep ser a que aparece nesta semana.
          */
         val GROUPS = listOf(
