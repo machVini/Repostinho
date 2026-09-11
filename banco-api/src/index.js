@@ -108,6 +108,15 @@ const CAIXINHA_ROWS = [2, 8];
 const MOVEMENT_FIRST_COL = 6; // F
 const MOVEMENT_LAST_COL = 30; // AD
 
+/**
+ * O cabeçalho da coluna que fecha o rateio, e que **não** é uma pessoa.
+ *
+ * Ela vive no meio das colunas de gente, e foi assim que entrou no rateio como se fosse
+ * um morador chamado "Total de pesos": o app dividia o valor por ela junto com os outros
+ * e mostrava, para cada um, o peso convertido em reais.
+ */
+const MOVEMENT_TOTAL_HEADER = "total de pesos";
+
 const TYPES = { COLETIVO: "COLETIVO", PRIVADO: "PRIVADO", ENTRADA: "ENTRADA", SAIDA: "SAIDA" };
 
 /** Dinheiro em centavos: Double acumula resto ao longo das somas. */
@@ -157,11 +166,15 @@ export function readMovements(sheet) {
   const range = XLSX.utils.decode_range(sheet["!ref"]);
   const lastRow = range.e.r + 1;
 
-  // Cabeçalho: cada coluna de F a AD é uma pessoa.
+  // Cabeçalho: cada coluna de F a AD é uma pessoa — menos a do total, que mora no meio
+  // delas. É pelo nome no cabeçalho, e não por posição: foi uma coluna a mais na planilha
+  // que empurrou o total para dentro do intervalo de gente.
   const people = {};
   for (let col = MOVEMENT_FIRST_COL; col <= MOVEMENT_LAST_COL; col++) {
     const name = text(cell(sheet, 1, col));
-    if (name) people[col] = name;
+    if (!name) continue;
+    if (name.toLowerCase() === MOVEMENT_TOTAL_HEADER) continue;
+    people[col] = name;
   }
 
   const out = [];
@@ -178,7 +191,17 @@ export function readMovements(sheet) {
       if (typeof w === "number" && w !== 0) weights[name] = weight(w);
     }
 
-    const totalWeight = cell(sheet, row, 31);
+    /*
+     * O total sai da soma dos pesos que vão junto, e não de uma célula da planilha.
+     *
+     * A célula que era lida aqui deixou de ser o total quando as colunas andaram, e
+     * passou a trazer o valor por peso — daí a conta do app dividir por algo que não
+     * tinha relação com os pesos. Somando o que de fato é enviado, as partes sempre
+     * fecham no valor do lançamento, aconteça o que acontecer com a planilha.
+     */
+    const totalWeight = weight(
+      Object.values(weights).reduce((soma, w) => soma + w, 0)
+    );
     const forms = cell(sheet, row, 1);
 
     out.push({
@@ -188,7 +211,7 @@ export function readMovements(sheet) {
       payer: text(cell(sheet, row, 4)) || "-",
       valueCents: cents(value),
       weights,
-      totalWeight: typeof totalWeight === "number" ? weight(totalWeight) : 0,
+      totalWeight,
     });
   }
   return out;
