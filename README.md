@@ -1,6 +1,6 @@
 # Repostinho
 
-A private app for the residents of a student republic ("república") at Unicamp — house
+A private app for the residents of a student residence ("república") at Unicamp — house
 finances, chores, calendar, and meeting notes in one place, built to feel like a small
 product rather than a spreadsheet with a UI bolted on.
 
