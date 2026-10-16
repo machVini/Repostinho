@@ -5,7 +5,7 @@ import com.mach.apps.repostinho.data.local.EventsCache
 import com.mach.apps.repostinho.data.local.MeetingNotesCache
 import com.mach.apps.repostinho.data.local.ResidentsCache
 import com.mach.apps.repostinho.data.local.SessionStore
-import com.mach.apps.repostinho.data.local.RotationPreferenceStore
+import com.mach.apps.repostinho.data.local.RotationCache
 import com.mach.apps.repostinho.data.local.ThemePreferenceStore
 import com.mach.apps.repostinho.data.local.textFileStore
 import com.mach.apps.repostinho.data.repository.AuthProvider
@@ -48,9 +48,9 @@ fun appModule(cacheDirectory: String) = module {
     single { EventsCache(textFileStore(cacheDirectory)) }
     single<EventRepository> { RemoteEventRepository(get(), get()) }
 
-    // As tarefas também são fixas, mas quem faz cada uma sai da data: o rodízio é
-    // calculado, e só a pausa precisa ficar gravada.
-    single { RotationPreferenceStore(textFileStore(cacheDirectory)) }
+    // As tarefas são fixas; quem faz cada uma sai da escala que o banco-api guarda. O
+    // disco só lembra a última vista, para a tela não abrir vazia sem rede.
+    single { RotationCache(textFileStore(cacheDirectory)) }
     single<ChoreRepository> { RotatingChoreRepository(get(), get()) }
 
     // O banco vem da planilha da rep, convertida em JSON pelo banco-api, e a última

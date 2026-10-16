@@ -15,58 +15,23 @@
  */
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { webcrypto as crypto } from "node:crypto";
 
 import worker from "../src/index.js";
+import { tokensDeTeste } from "./token.mjs";
 
 const PROJECT_ID = "repostinho-teste";
-const KID = "chave-de-teste";
 const API_TOKEN = "token-de-administrador";
 
-const fetchOriginal = globalThis.fetch;
 let tokenDeMorador;
-
-function base64Url(bytes) {
-  return Buffer.from(bytes).toString("base64url");
-}
-
-async function assinarToken(privateKey, corpo) {
-  const cabecalho = base64Url(JSON.stringify({ alg: "RS256", kid: KID, typ: "JWT" }));
-  const carga = base64Url(JSON.stringify(corpo));
-  const assinatura = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    privateKey,
-    new TextEncoder().encode(`${cabecalho}.${carga}`)
-  );
-  return `${cabecalho}.${carga}.${base64Url(new Uint8Array(assinatura))}`;
-}
+let restaurar;
 
 before(async () => {
-  const par = await crypto.subtle.generateKey(
-    { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
-    true,
-    ["sign", "verify"]
-  );
-
-  const jwk = await crypto.subtle.exportKey("jwk", par.publicKey);
-  globalThis.fetch = async () =>
-    new Response(JSON.stringify({ keys: [{ ...jwk, kid: KID, alg: "RS256", use: "sig" }] }), {
-      headers: { "content-type": "application/json", "cache-control": "max-age=3600" },
-    });
-
-  const agora = Math.floor(Date.now() / 1000);
-  tokenDeMorador = await assinarToken(par.privateKey, {
-    aud: PROJECT_ID,
-    iss: `https://securetoken.google.com/${PROJECT_ID}`,
-    sub: "uid-do-peter",
-    iat: agora,
-    exp: agora + 3600,
-  });
+  const tokens = await tokensDeTeste(PROJECT_ID);
+  restaurar = tokens.restaurar;
+  tokenDeMorador = await tokens.assinar({ email: "morador@example.com" });
 });
 
-after(() => {
-  globalThis.fetch = fetchOriginal;
-});
+after(() => restaurar());
 
 /** KV de mentira que lembra o que gravaram, para o teste ver se gravaram. */
 function kvFalso(inicial) {

@@ -111,6 +111,7 @@ fun App() {
             val events by viewModel.events.collectAsStateWithLifecycle()
             val notes by viewModel.meetingNotes.collectAsStateWithLifecycle()
             val rotation by viewModel.rotation.collectAsStateWithLifecycle()
+            val rotationAction by viewModel.rotationAction.collectAsStateWithLifecycle()
             val eventsShared by viewModel.eventsShared.collectAsStateWithLifecycle()
             val eventsRefreshing by viewModel.eventsRefreshing.collectAsStateWithLifecycle()
 
@@ -280,7 +281,10 @@ fun App() {
                             residents = state.residents,
                             currentResidentId = state.currentResidentId,
                             rotation = rotation,
+                            canRotate = state.currentResident?.canRotateChores == true,
+                            rotationAction = rotationAction,
                             onSetDone = viewModel::setTaskDone,
+                            onRotate = { viewModel.rotateChores() },
                             modifier = inset
                         )
 

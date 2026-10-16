@@ -63,6 +63,15 @@ const EVENTOS_KEY = "eventos:v1";
 const MORADORES_KEY = "moradores:v1";
 
 /**
+ * A semana do rodízio, agora que ela não sai mais da data.
+ *
+ * Enquanto a escala era função do calendário, cada aparelho chegava sozinho no mesmo
+ * resultado e não havia o que guardar. Com a virada no dedo de alguém, a semana vira
+ * estado compartilhado: sem isto, quem rodasse veria uma escala e a rep veria outra.
+ */
+const RODIZIO_KEY = "rodizio:v1";
+
+/**
  * Prefixo das fotos dos moradores no KV.
  *
  * O lugar certo para binário seria o R2, mas ele precisa ser habilitado no Dashboard e
@@ -670,6 +679,77 @@ async function handleMoradores(request, env, admin) {
   return moradoresResponse(residents);
 }
 
+/**
+ * A semana do rodízio das tarefas.
+ *
+ * `GET` é de qualquer morador: todo aparelho precisa saber qual escala está valendo.
+ * `POST` é de quem o cadastro marcou com `canRotateChores` — e quem é "quem" sai do email
+ * assinado dentro do token do Firebase, não de um id que o app mande. Esconder o botão na
+ * tela seria combinado, não permissão.
+ *
+ * O corpo traz `delta`: +1 vira para a próxima escala, -1 desfaz um toque errado. Um
+ * número absoluto abriria espaço para o app mandar uma semana velha e a escala andar para
+ * trás sem ninguém pedir.
+ */
+async function handleRodizio(request, env, usuario, admin) {
+  if (!env.TAREFAS) {
+    return json({ error: "KV TAREFAS não configurado" }, 500);
+  }
+
+  const atual = await readRodizio(env);
+
+  if (request.method === "GET") {
+    return json(atual, 200, { "cache-control": "no-store" });
+  }
+
+  if (request.method !== "POST") {
+    return json({ error: "method not allowed" }, 405);
+  }
+
+  if (!admin) {
+    const quem = await moradorDoEmail(env, usuario?.email);
+    if (!quem?.canRotateChores) {
+      return json({ error: "forbidden" }, 403);
+    }
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "corpo não é JSON" }, 400);
+  }
+
+  const delta = body?.delta;
+  if (delta !== 1 && delta !== -1) {
+    return json({ error: "delta deve ser 1 ou -1" }, 400);
+  }
+
+  // Semana negativa não existe: desfazer na primeira escala não pode jogar o rodízio
+  // para antes do começo.
+  const week = Math.max(0, atual.week + delta);
+  const novo = { week, rotatedAt: new Date().toISOString() };
+
+  await env.TAREFAS.put(RODIZIO_KEY, JSON.stringify(novo));
+  return json(novo, 200, { "cache-control": "no-store" });
+}
+
+async function readRodizio(env) {
+  const raw = await env.TAREFAS.get(RODIZIO_KEY, { type: "json" });
+  if (!raw || typeof raw.week !== "number" || !Number.isInteger(raw.week)) {
+    // Sem nada gravado, a escala é a primeira — e não um erro: é assim que a rep começa.
+    return { week: 0, rotatedAt: null };
+  }
+  return { week: raw.week, rotatedAt: typeof raw.rotatedAt === "string" ? raw.rotatedAt : null };
+}
+
+/** O morador dono de um email, para saber quem é quem chamou. */
+async function moradorDoEmail(env, email) {
+  if (!email) return null;
+  const residents = await readMoradores(env);
+  return residents.find((m) => m.isActive && m.email === email) ?? null;
+}
+
 async function readMoradores(env) {
   const raw = await env.TAREFAS.get(MORADORES_KEY, { type: "json" });
   if (!Array.isArray(raw)) return [];
@@ -718,6 +798,9 @@ function validResident(raw) {
     // O nome dele na planilha, quando diferente. Sem isso o app procura a coluna pelo
     // nome que exibe, não acha, e a pessoa vê saldo vazio como se não devesse nada.
     sheetName: typeof raw.sheetName === "string" ? raw.sheetName.trim() || null : null,
+    // Quem pode virar a escala das tarefas. Fica no cadastro, e não no código, para
+    // passar de uma pessoa para outra sem publicar versão nova do app.
+    canRotateChores: raw.canRotateChores === true,
     medical: validMedical(raw.medical),
   };
 }
@@ -888,9 +971,12 @@ export default {
      * de viajar no binário e virou chave de administração, usada só nos cadastros por
      * linha de comando.
      */
-    const uid = await verificarTokenFirebase(tokenDoCabecalho(request), env.FIREBASE_PROJECT_ID);
+    const usuario = await verificarTokenFirebase(
+      tokenDoCabecalho(request),
+      env.FIREBASE_PROJECT_ID
+    );
     const admin = env.API_TOKEN && request.headers.get("x-rep-token") === env.API_TOKEN;
-    if (!uid && !admin) {
+    if (!usuario && !admin) {
       return json({ error: "unauthorized" }, 401);
     }
 
@@ -898,6 +984,7 @@ export default {
     if (url.pathname === "/tarefas") return handleTarefas(request, env);
     if (url.pathname === "/eventos") return handleEventos(request, env);
     if (url.pathname === "/moradores") return handleMoradores(request, env, admin);
+    if (url.pathname === "/rodizio") return handleRodizio(request, env, usuario, admin);
     if (url.pathname.startsWith("/foto/")) {
       return handleFoto(request, env, decodeURIComponent(url.pathname.slice("/foto/".length)), admin);
     }

@@ -45,6 +45,14 @@ data class Resident(
      */
     val sheetName: String? = null,
     /**
+     * Pode virar a escala das tarefas.
+     *
+     * Vem do cadastro, e não de um id escrito no app: trocar quem roda não pode exigir
+     * versão nova para os quinze. Quem confere de verdade é o Worker — aqui o campo só
+     * decide se o botão aparece.
+     */
+    val canRotateChores: Boolean = false,
+    /**
      * URL da foto. Vazio cai no monograma com a inicial do nome.
      *
      * URL, e não imagem embutida: foto no binário obriga a publicar versão nova do app

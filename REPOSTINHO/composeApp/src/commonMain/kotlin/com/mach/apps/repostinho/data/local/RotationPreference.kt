@@ -1,49 +1,40 @@
 package com.mach.apps.repostinho.data.local
 
-import com.mach.apps.repostinho.data.model.ChoreRotation
-import com.mach.apps.repostinho.data.model.RotationState
-import kotlinx.datetime.LocalDate
-
 /**
- * Guarda o estado do rodízio em disco.
+ * Guarda a última escala conhecida em disco.
  *
- * Duas linhas de texto, no estilo do [ThemePreferenceStore]: a âncora em ISO e a semana
- * congelada, ou `-` quando o rodízio está andando. Legível a olho nu — quando a escala
+ * A escala não é mais calculada da data: ela é um número que mora no `banco-api` e só
+ * anda quando alguém roda. Isso significa que, sem rede, o app não tem como descobri-la
+ * sozinho — e abrir a tela de tarefas sem escala nenhuma seria pior do que mostrar a
+ * última que se viu, dizendo de onde ela veio.
+ *
+ * Duas linhas de texto, no estilo das outras preferências: a semana e quando ela foi
+ * virada, ou `-` quando isso nunca aconteceu. Legível a olho nu — quando a escala
  * aparecer errada, este arquivo é a primeira coisa a olhar.
  *
  * ```
- * 2026-08-12
- * -
+ * 8
+ * 2026-10-16T03:40:00.000Z
  * ```
  */
-class RotationPreferenceStore(private val store: TextFileStore) {
+class RotationCache(private val store: TextFileStore) {
 
-    fun read(): RotationState {
-        val lines = store.read(FILE_NAME)?.trim()?.lines() ?: return DEFAULT
-
-        // Arquivo truncado ou gravado por uma versão futura volta ao padrão: uma âncora
-        // ilegível reembaralharia a escala inteira, o que é pior do que ignorar o arquivo.
-        val anchor = lines.getOrNull(0)?.trim()
-            ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-            ?: return DEFAULT
-
-        val paused = lines.getOrNull(1)?.trim()
-            ?.takeIf { it != RUNNING }
-            ?.toIntOrNull()
-
-        return RotationState(anchor = anchor, pausedAtWeek = paused)
+    fun read(): CachedRotation? {
+        val lines = store.read(FILE_NAME)?.trim()?.lines() ?: return null
+        val week = lines.getOrNull(0)?.trim()?.toIntOrNull() ?: return null
+        val rotatedAt = lines.getOrNull(1)?.trim()?.takeIf { it != NUNCA }
+        return CachedRotation(week = week, rotatedAt = rotatedAt)
     }
 
-    fun write(state: RotationState) {
-        store.write(
-            FILE_NAME,
-            "${state.anchor}\n${state.pausedAtWeek?.toString() ?: RUNNING}"
-        )
+    fun write(rotation: CachedRotation) {
+        store.write(FILE_NAME, "${rotation.week}\n${rotation.rotatedAt ?: NUNCA}")
     }
 
     private companion object {
         const val FILE_NAME = "rodizio.txt"
-        const val RUNNING = "-"
-        val DEFAULT = RotationState(anchor = ChoreRotation.DEFAULT_ANCHOR)
+        const val NUNCA = "-"
     }
 }
+
+/** A escala como ela foi vista pela última vez. */
+data class CachedRotation(val week: Int, val rotatedAt: String? = null)

@@ -49,6 +49,12 @@ data class BankUiState(
  * Nada aqui é recalculado: os saldos vêm prontos da aba `Saldos_pessoas`. O app e a planilha
  * discordarem em centavos seria pior do que não ter o app.
  */
+/** O estado do toque de virar a escala, que é o único gesto do app que pode falhar alto. */
+data class RotationAction(
+    val isBusy: Boolean = false,
+    val error: String? = null
+)
+
 data class SheetUiState(
     val balances: List<MemberBalance> = emptyList(),
     val movements: List<Movement> = emptyList(),
@@ -130,12 +136,17 @@ class DashboardViewModel(
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    private val rotationActionState = MutableStateFlow(RotationAction())
+
+    /** Em que pé está o toque de virar a escala: rodando, ou com falha para mostrar. */
+    val rotationAction: StateFlow<RotationAction> = rotationActionState.asStateFlow()
+
     val rotation: StateFlow<RotationStatus> = choreRepository.getRotationStatus()
-        .catch { emit(RotationStatus(week = 0, rangeLabel = "", isPaused = false)) }
+        .catch { emit(RotationStatus(week = 0)) }
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5_000),
-            RotationStatus(week = 0, rangeLabel = "", isPaused = false)
+            RotationStatus(week = 0)
         )
 
     /**
@@ -249,14 +260,27 @@ class DashboardViewModel(
     }
 
     /**
-     * Congela ou destrava o rodízio. Pausado, ninguém troca de tarefa na sexta.
+     * Vira a escala para a rep inteira — `-1` desfaz.
      *
-     * Sem botão na tela por enquanto: pausar valeria só neste aparelho, e a escala parada
-     * num celular enquanto gira nos outros confunde mais do que ajuda. A lógica fica
-     * pronta e testada para quando a escala passar a ser compartilhada.
+     * A falha aparece na tela em vez de sumir: quem roda é uma pessoa só, e se a chamada
+     * não chegou no servidor ela precisa saber agora, não quando alguém reclamar que a
+     * escala não virou. Quem pode rodar é o Worker que decide; aqui o botão só não
+     * aparece para quem não pode.
      */
-    fun setRotationPaused(paused: Boolean) {
-        viewModelScope.launch { choreRepository.setPaused(paused) }
+    fun rotateChores(delta: Int = 1) {
+        viewModelScope.launch {
+            rotationActionState.value = RotationAction(isBusy = true)
+            val resultado = choreRepository.rotate(delta)
+            rotationActionState.value = RotationAction(
+                isBusy = false,
+                error = resultado.exceptionOrNull()?.let { "Não deu para virar a escala agora." }
+            )
+        }
+    }
+
+    /** Limpa o aviso de falha quando o morador já o leu. */
+    fun dismissRotationError() {
+        rotationActionState.value = rotationActionState.value.copy(error = null)
     }
 
     /** Só a tarefa do próprio morador pode ser marcada; as outras são consulta. */

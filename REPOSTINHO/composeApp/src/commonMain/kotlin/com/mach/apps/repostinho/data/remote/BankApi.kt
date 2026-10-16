@@ -55,6 +55,21 @@ data class ChoreDonePayload(
     val doneChoreIds: List<String> = emptyList()
 )
 
+/**
+ * A escala que está valendo.
+ *
+ * `rotatedAt` é ISO-8601 e pode vir nulo: a rep que nunca rodou está na primeira escala,
+ * e isso não é erro.
+ */
+@Serializable
+data class RotationPayload(
+    val week: Int,
+    val rotatedAt: String? = null
+)
+
+@Serializable
+private data class RotationRequest(val delta: Int)
+
 @Serializable
 private data class ChoreDoneRequest(
     val week: Int,
@@ -122,6 +137,17 @@ class BankApi(
      */
     suspend fun setChoreDone(week: Int, choreId: String, done: Boolean): ChoreDonePayload =
         post("tarefas", ChoreDoneRequest(week = week, choreId = choreId, done = done))
+
+    /** Qual escala está valendo agora. Lança em caso de falha. */
+    suspend fun fetchRotation(): RotationPayload = get("rodizio")
+
+    /**
+     * Vira a escala para a rep inteira — ou desfaz, com `delta = -1`.
+     *
+     * Quem pode é decidido no Worker, pelo email dentro do token: a tela esconder o botão
+     * é combinado, não permissão.
+     */
+    suspend fun rotate(delta: Int): RotationPayload = post("rodizio", RotationRequest(delta))
 
     /** Os moradores da rep. Lança em caso de falha. */
     suspend fun fetchResidents(): ResidentsPayload = get("moradores")

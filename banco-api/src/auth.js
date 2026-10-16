@@ -57,7 +57,11 @@ function base64UrlParaJson(texto) {
 }
 
 /**
- * Devolve o `uid` do morador quando o token é válido, ou `null`.
+ * Devolve `{ uid, email }` quando o token é válido, ou `null`.
+ *
+ * O email vem do próprio token, assinado pelo Google — é o que permite saber **quem** é
+ * quem chamou sem guardar vínculo nenhum deste lado. Confiar num id que o app mandasse
+ * no corpo seria confiar no cliente, e aí a permissão não valeria nada.
  *
  * Recusa em silêncio de propósito: distinguir "token expirado" de "assinatura errada" na
  * resposta só ajudaria quem está tentando forjar um.
@@ -116,7 +120,13 @@ export async function verificarTokenFirebase(token, projectId) {
     assinatura,
     assinado
   );
-  return ok ? corpo.sub : null;
+  if (!ok) return null;
+
+  return {
+    uid: corpo.sub,
+    // Minúsculo, como no cadastro: é por ele que o morador é encontrado.
+    email: typeof corpo.email === "string" ? corpo.email.trim().toLowerCase() : null,
+  };
 }
 
 /** O `Authorization: Bearer <token>`, se vier. */
